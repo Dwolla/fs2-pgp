@@ -1,0 +1,5 @@
+stages:
+  build:
+    nodeLabel: sbt
+    steps:
+      - sbt +test
