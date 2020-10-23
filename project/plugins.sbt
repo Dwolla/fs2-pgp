@@ -1,0 +1,5 @@
+addSbtPlugin("org.foundweekends" % "sbt-bintray" % "0.5.6")
+addSbtPlugin("com.github.gseitz" % "sbt-release" % "1.0.13")
+addSbtPlugin("com.dwijnand" % "sbt-travisci" % "1.2.0")
+addSbtPlugin("io.github.davidgregory084" % "sbt-tpolecat" % "0.1.14")
+addSbtPlugin("com.github.cb372" % "sbt-explicit-dependencies" % "0.2.15")
