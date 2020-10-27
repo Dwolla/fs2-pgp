@@ -66,7 +66,7 @@ lazy val `fs2-pgp` = (project in file("."))
         "com.chuusai" %% "shapeless" % "2.3.3",
         "org.scala-lang.modules" %% "scala-collection-compat" % "2.2.0",
         "io.chrisdavenport" %% "log4cats-core" % log4catsV,
-        "io.chrisdavenport" %% "log4cats-slf4j" % log4catsV % Test,
+        "org.scalatest" %% "scalatest" % "3.2.2" % Test,
         "com.codecommit" %% "cats-effect-testing-scalatest-scalacheck" % "0.4.1" % Test,
       )
     },
