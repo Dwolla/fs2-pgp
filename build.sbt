@@ -1,25 +1,39 @@
-lazy val commonSettings = Seq(
+lazy val SCALA_2_12 = "2.12.12"
+lazy val SCALA_2_13 = "2.13.3"
+
+inThisBuild(List(
+  scalaVersion := SCALA_2_13,
+  crossScalaVersions := Seq(SCALA_2_13, SCALA_2_12),
   organization := "com.dwolla",
-  homepage := Some(url("https://github.com/Dwolla/fs2-pgp")),
+  homepage := Option(url("https://github.com/Dwolla/fs2-pgp")),
   licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
-  releaseVersionBump := sbtrelease.Version.Bump.Minor,
-  releaseCrossBuild := false,
-  releaseProcess := {
-    import sbtrelease.ReleaseStateTransformations._
-    Seq[ReleaseStep](
-      checkSnapshotDependencies,
-      inquireVersions,
-      runClean,
-      releaseStepCommandAndRemaining("+test"),
-      setReleaseVersion,
-      commitReleaseVersion,
-      tagRelease,
-      releaseStepCommandAndRemaining("+publish"),
-      setNextVersion,
-      commitNextVersion,
-      pushChanges
+  developers := List(
+    Developer(
+      "bpholt",
+      "Brian Holt",
+      "bholt@dwolla.com",
+      url("https://dwolla.com")
     )
-  },
+  ),
+  githubWorkflowTargetTags ++= Seq("v*"),
+  githubWorkflowPublishTargetBranches :=
+    Seq(RefPredicate.StartsWith(Ref.Tag("v"))),
+  githubWorkflowPublish := Seq(WorkflowStep.Sbt(List("ci-release"))),
+  githubWorkflowPublishPreamble += WorkflowStep.Use("olafurpg", "setup-gpg", "v2"),
+  githubWorkflowPublish := Seq(
+    WorkflowStep.Sbt(
+      List("ci-release"),
+      env = Map(
+        "PGP_PASSPHRASE" -> "${{ secrets.PGP_PASSPHRASE }}",
+        "PGP_SECRET" -> "${{ secrets.PGP_SECRET }}",
+        "SONATYPE_PASSWORD" -> "${{ secrets.SONATYPE_PASSWORD }}",
+        "SONATYPE_USERNAME" -> "${{ secrets.SONATYPE_USERNAME }}"
+      )
+    )
+  ),
+))
+
+lazy val commonSettings = Seq(
   startYear := Option(2020),
   resolvers ++= Seq(
     Resolver.bintrayRepo("dwolla", "maven")
@@ -39,13 +53,6 @@ lazy val commonSettings = Seq(
       case _ => compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full) :: Nil
     }
   },
-)
-
-lazy val bintraySettings = Seq(
-  bintrayVcsUrl := homepage.value.map(_.toString),
-  bintrayRepository := "maven",
-  bintrayOrganization := Option("dwolla"),
-  pomIncludeRepository := { _ => false }
 )
 
 lazy val `fs2-pgp` = (project in file("."))
@@ -70,7 +77,7 @@ lazy val `fs2-pgp` = (project in file("."))
         "com.codecommit" %% "cats-effect-testing-scalatest-scalacheck" % "0.4.1" % Test,
       )
     },
-  ) ++ commonSettings ++ bintraySettings: _*)
+  ) ++ commonSettings: _*)
 
 lazy val noPublishSettings = Seq(
   publish := {},
