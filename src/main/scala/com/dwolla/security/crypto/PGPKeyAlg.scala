@@ -16,11 +16,9 @@ trait PGPKeyAlg[F[_]] {
 }
 
 object PGPKeyAlg {
-  class PartiallyAppliedPGPKeyAlg[G[_]] private[PGPKeyAlg] () {
-    def apply[F[_] : MonadError[*[_], Throwable]](blocker: Blocker)
-                                                 (implicit G: Sync[G],
-                                                  CS: ContextShift[G],
-                                                  SC: Stream.Compiler[G, F]): PGPKeyAlg[F] = new PGPKeyAlg[F] {
+  class PartiallyAppliedPGPKeyAlg[F[_]] private[PGPKeyAlg] () {
+    def apply[G[_] : Stream.Compiler[*[_], F] : Sync : ContextShift](blocker: Blocker)
+                                                                    (implicit F: MonadError[F, Throwable]): PGPKeyAlg[F] = new PGPKeyAlg[F] {
       import scala.jdk.CollectionConverters._
 
       override def readPublicKey(key: String): F[PGPPublicKey] =
@@ -74,12 +72,13 @@ object PGPKeyAlg {
   }
 
   /**
-   * Starts to build a PGPKeyAlg by fixing the first higher-kinded type param
+   * Starts to build a PGPKeyAlg by fixing the higher-kinded output type param
    * that needs to be provided or inferred. The type provided here will be the
-   * main effect in which the PGPKeyAlg will operate. The second type provided
-   * to `PartiallyAppliedPGPKeyAlg.apply` will be the output type. It will
-   * typically be the same type provided here, but other types are possible:
+   * effect in which the return values from PGPKeyAlg's methods will operate.
    *
+   * The second type provided to `PartiallyAppliedPGPKeyAlg.apply` will be
+   * the main output type. It will typically be the same type provided here,
+   * but other types are possible:
    * {{{
    * val key: String = "armored key"
    *
@@ -87,8 +86,8 @@ object PGPKeyAlg {
    * val ioAlg: PGPKeyAlg[IO] = PGPKeyAlg[IO](blocker)
    * val readInIO: IO[PGPPublicKey] = ioAlg.readPublicKey(key)
    *
-   * // second HKT inferred to be Resource[IO, *]
-   * val resourceAlg: PGPKeyAlg[Resource[IO, *]] = PGPKeyAlg[IO](blocker)
+   * // second HKT inferred to be IO
+   * val resourceAlg: PGPKeyAlg[Resource[IO, *]] = PGPKeyAlg[Resource[IO, *]](blocker)
    * val readInResource: Resource[IO, PGPPublicKey] = resourceAlg.readPublicKey(key)
    * }}}
    */

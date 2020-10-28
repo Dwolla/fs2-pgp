@@ -134,6 +134,21 @@ class PGPKeyAlgSpec
     }
   }
 
+  it should "infer the second Stream compiler type cleanly for IO" in { blocker =>
+    val pgpKeyAlg = PGPKeyAlg[IO](blocker)
+
+    val output = pgpKeyAlg.readPublicKey("")
+    output shouldBe an [IO[_]]
+  }
+
+  it should "infer the second Stream compiler type cleanly for Resource" in { blocker =>
+    val pgpKeyAlg = PGPKeyAlg[Resource[IO, *]](blocker)
+
+    val output = pgpKeyAlg.readPublicKey("")
+    output shouldBe a [Resource[*[_], _]]
+    output.use(_ => IO.unit) shouldBe an [IO[_]]
+  }
+
   private implicit def ioCheckingAsserting[A]: CheckerAsserting[Resource[IO, A]] { type Result = IO[Unit] } =
     new ResourceCheckerAsserting[IO, A]
 }
