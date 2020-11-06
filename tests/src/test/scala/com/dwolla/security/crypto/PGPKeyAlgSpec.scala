@@ -10,6 +10,7 @@ import org.bouncycastle.bcpg.{HashAlgorithmTags, PublicKeyAlgorithmTags, Symmetr
 import org.bouncycastle.openpgp._
 import org.bouncycastle.openpgp.operator.PGPDigestCalculator
 import org.bouncycastle.openpgp.operator.jcajce.{JcaPGPContentSignerBuilder, JcaPGPDigestCalculatorProviderBuilder, JcePBESecretKeyEncryptorBuilder}
+import org.scalacheck.Arbitrary
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalatest.flatspec._
 import org.scalatest.matchers.should.Matchers
@@ -24,6 +25,7 @@ class PGPKeyAlgSpec
     with ScalaCheckPropertyChecks
     with PgpArbitraries {
   private implicit val L: Logger[IO] = NoOpLogger[IO]()
+  private implicit def arbKeyPair[F[_] : Sync : ContextShift : Clock]: Arbitrary[Resource[F, PGPKeyPair]] = arbStrongKeyPair[F]
 
   override def resource: Resource[IO, Blocker] = Blocker[IO]
 
