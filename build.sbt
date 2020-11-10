@@ -1,5 +1,6 @@
 lazy val SCALA_2_12 = "2.12.12"
 lazy val SCALA_2_13 = "2.13.3"
+lazy val bouncyCastleV = "1.66"
 
 inThisBuild(List(
   scalaVersion := SCALA_2_13,
@@ -55,11 +56,10 @@ lazy val commonSettings = Seq(
   },
 )
 
-lazy val `fs2-pgp` = (project in file("."))
+lazy val `fs2-pgp`: Project = (project in file("core"))
   .settings(Seq(
     description := "fs2 pipes for encrypting and decrypting streams with BouncyCastle PGP",
     libraryDependencies ++= {
-      val bouncyCastleV = "1.66"
       val fs2V = "2.4.4"
       val log4catsV = "1.0.1"
 
@@ -73,11 +73,40 @@ lazy val `fs2-pgp` = (project in file("."))
         "com.chuusai" %% "shapeless" % "2.3.3",
         "org.scala-lang.modules" %% "scala-collection-compat" % "2.2.0",
         "io.chrisdavenport" %% "log4cats-core" % log4catsV,
+      )
+    },
+  ) ++ commonSettings: _*)
+
+lazy val tests = (project in file("tests"))
+  .settings(Seq(
+    description := "Tests broken out into a separate project to break a circular dependency",
+    libraryDependencies ++= {
+      Seq(
         "org.scalatest" %% "scalatest" % "3.2.2" % Test,
         "com.codecommit" %% "cats-effect-testing-scalatest-scalacheck" % "0.4.1" % Test,
       )
     },
+  ) ++ commonSettings ++ noPublishSettings: _*)
+  .dependsOn(`fs2-pgp`, `pgp-testkit`)
+
+lazy val `pgp-testkit`: Project = (project in file("testkit"))
+  .settings(Seq(
+    description := "Scalacheck Arbitraries for PGP resources",
+    libraryDependencies ++= {
+      Seq(
+        "org.bouncycastle" % "bcpg-jdk15on" % bouncyCastleV,
+        "org.bouncycastle" % "bcprov-jdk15on" % bouncyCastleV,
+        "org.scalacheck" %% "scalacheck" % "1.15.0",
+        "org.scalatest" %% "scalatest" % "3.2.2",
+        "com.codecommit" %% "cats-effect-testing-scalatest-scalacheck" % "0.4.1",
+      )
+    },
   ) ++ commonSettings: _*)
+  .dependsOn(`fs2-pgp`)
+
+lazy val `fs2-pgp-root` = (project in file("."))
+  .settings(noPublishSettings: _*)
+  .aggregate(`fs2-pgp`, tests, `pgp-testkit`)
 
 lazy val noPublishSettings = Seq(
   publish := {},
