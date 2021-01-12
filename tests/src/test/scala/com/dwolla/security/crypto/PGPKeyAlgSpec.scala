@@ -19,7 +19,7 @@ import org.scalatestplus.scalacheck.{CheckerAsserting, ScalaCheckPropertyChecks}
 class PGPKeyAlgSpec
   extends FixtureAsyncFlatSpec
     with AsyncIOSpec
-    with AsyncCatsResourceIO[Blocker]
+    with CatsResourceIO[Blocker]
     with Matchers
     with DateMatchers
     with ScalaCheckPropertyChecks
