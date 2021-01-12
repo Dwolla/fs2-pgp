@@ -27,7 +27,7 @@ inThisBuild(List(
   githubWorkflowPublishTargetBranches :=
     Seq(RefPredicate.StartsWith(Ref.Tag("v"))),
   githubWorkflowPublish := Seq(WorkflowStep.Sbt(List("ci-release"))),
-  githubWorkflowPublishPreamble += WorkflowStep.Use("olafurpg", "setup-gpg", "v2"),
+  githubWorkflowPublishPreamble += WorkflowStep.Use("olafurpg", "setup-gpg", "v3"),
   githubWorkflowPublish := Seq(
     WorkflowStep.Sbt(
       List("ci-release"),
