@@ -82,6 +82,7 @@ lazy val `fs2-pgp`: Project = (project in file("core"))
         "com.chuusai" %% "shapeless" % V.shapeless,
         "org.scala-lang.modules" %% "scala-collection-compat" % "2.2.0",
         "io.chrisdavenport" %% "log4cats-core" % log4catsV,
+        "eu.timepit" %% "refined" % V.refined,
       )
     },
     unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),
@@ -94,6 +95,7 @@ lazy val tests = (project in file("tests"))
       Seq(
         "org.scalatest" %% "scalatest" % V.scalaTest % Test,
         "com.codecommit" %% "cats-effect-testing-scalatest-scalacheck" % V.catsEffectTestingScalatestScalacheck % Test,
+        "eu.timepit" %% "refined-scalacheck" % V.refined % Test,
       )
     },
     skip in publish := true,
@@ -116,6 +118,8 @@ lazy val `pgp-testkit`: Project = (project in file("testkit"))
         "org.scalatestplus" %% "scalacheck-1-15" % "3.2.3.0",
         "org.typelevel" %% "cats-core" % V.cats,
         "org.typelevel" %% "cats-effect" % V.catsEffect,
+        "eu.timepit" %% "refined" % V.refined,
+        "com.chuusai" %% "shapeless" % V.shapeless,
       )
     },
   ) ++ commonSettings: _*)

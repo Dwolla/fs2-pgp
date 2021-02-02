@@ -3,6 +3,7 @@ package com.dwolla.security.crypto
 import cats.effect._
 import cats.effect.testing.scalatest._
 import cats.syntax.all._
+import com.dwolla.security.crypto.StreamableOutputStream.readOutputStream
 import com.dwolla.testutils._
 import io.chrisdavenport.log4cats.Logger
 import fs2._
@@ -13,17 +14,12 @@ import org.bouncycastle.openpgp.operator.jcajce.{JcaPGPContentSignerBuilder, Jca
 import org.scalacheck.Arbitrary
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalatest.flatspec._
-import org.scalatest.matchers.should.Matchers
-import org.scalatestplus.scalacheck.{CheckerAsserting, ScalaCheckPropertyChecks}
 
 class PGPKeyAlgSpec
   extends FixtureAsyncFlatSpec
-    with AsyncIOSpec
+    with Fs2PgpSpec
     with CatsResourceIO[Blocker]
-    with Matchers
-    with DateMatchers
-    with ScalaCheckPropertyChecks
-    with PgpArbitraries {
+    with DateMatchers {
   private implicit val L: Logger[IO] = NoOpLogger[IO]()
   private implicit def arbKeyPair[F[_] : Sync : ContextShift : Clock]: Arbitrary[Resource[F, PGPKeyPair]] = arbStrongKeyPair[F]
 
@@ -116,7 +112,7 @@ class PGPKeyAlgSpec
               new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, "identity", sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA256), new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256, sha1Calc).setProvider("BC").build(passphrase))
             })
             armoredKey <-
-              io.readOutputStream(blocker, defaultChunkSize) { os =>
+              readOutputStream(blocker) { os =>
                 blocker.delay(secretKey.encode(os))
               }
                 .through(crypto.armor())
@@ -150,7 +146,4 @@ class PGPKeyAlgSpec
     output shouldBe a [Resource[*[_], _]]
     output.use(_ => IO.unit) shouldBe an [IO[_]]
   }
-
-  private implicit def ioCheckingAsserting[A]: CheckerAsserting[Resource[IO, A]] { type Result = IO[Unit] } =
-    new ResourceCheckerAsserting[IO, A]
 }

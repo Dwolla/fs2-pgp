@@ -1,12 +1,20 @@
 package com.dwolla.security
 
+import eu.timepit.refined.types.all._
+import eu.timepit.refined.auto._
+import eu.timepit.refined.predicates.all.Positive
+import eu.timepit.refined.refineV
 import shapeless.tag
 import shapeless.tag.@@
 import org.bouncycastle.openpgp.PGPLiteralData
 
 package object crypto {
-  type ChunkSize = Int @@ ChunkSizeTag
-  val defaultChunkSize: ChunkSize = tag[ChunkSizeTag][Int](4096)
+  type ChunkSize = PosInt @@ ChunkSizeTag
+
+  def tagChunkSize(pi: PosInt): ChunkSize = tag[ChunkSizeTag][PosInt](pi)
+  def attemptTagChunkSize(pi: Int): Either[String, ChunkSize] = refineV[Positive](pi).map(tagChunkSize)
+
+  val defaultChunkSize: ChunkSize = tagChunkSize(4096)
 }
 
 package crypto {
