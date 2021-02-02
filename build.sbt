@@ -7,6 +7,8 @@ lazy val V = new {
   val bouncyCastle = "1.66"
   val scalaTest = "3.2.3"
   val catsEffectTestingScalatestScalacheck = "0.5.0"
+  val refined = "0.9.20"
+  val shapeless = "2.3.3"
 }
 
 inThisBuild(List(
@@ -26,8 +28,8 @@ inThisBuild(List(
   githubWorkflowTargetTags ++= Seq("v*"),
   githubWorkflowPublishTargetBranches :=
     Seq(RefPredicate.StartsWith(Ref.Tag("v"))),
+  githubWorkflowBuild := Seq(WorkflowStep.Sbt(List("undeclaredCompileDependenciesTest", "unusedCompileDependenciesTest", "test"), name = Some("Build and test project"))),
   githubWorkflowPublish := Seq(WorkflowStep.Sbt(List("ci-release"))),
-  githubWorkflowPublishPreamble += WorkflowStep.Use("olafurpg", "setup-gpg", "v3"),
   githubWorkflowPublish := Seq(
     WorkflowStep.Sbt(
       List("ci-release"),
@@ -77,7 +79,7 @@ lazy val `fs2-pgp`: Project = (project in file("core"))
         "org.bouncycastle" % "bcprov-jdk15on" % V.bouncyCastle,
         "co.fs2" %% "fs2-core" % fs2V,
         "co.fs2" %% "fs2-io" % fs2V,
-        "com.chuusai" %% "shapeless" % "2.3.3",
+        "com.chuusai" %% "shapeless" % V.shapeless,
         "org.scala-lang.modules" %% "scala-collection-compat" % "2.2.0",
         "io.chrisdavenport" %% "log4cats-core" % log4catsV,
       )
@@ -107,7 +109,7 @@ lazy val `pgp-testkit`: Project = (project in file("testkit"))
         "org.bouncycastle" % "bcprov-jdk15on" % V.bouncyCastle % Runtime,
         "com.codecommit" %% "cats-effect-testing-scalatest-scalacheck" % V.catsEffectTestingScalatestScalacheck,
         "io.chrisdavenport" %% "log4cats-core" % "1.1.1",
-        "org.scalacheck" %% "scalacheck" % "1.15.1",
+        "org.scalacheck" %% "scalacheck" % "1.15.2",
         "org.scalactic" %% "scalactic" % "3.2.3",
         "org.scalatest" %% "scalatest-core" % "3.2.3",
         "org.scalatest" %% "scalatest-matchers-core" % "3.2.3",
