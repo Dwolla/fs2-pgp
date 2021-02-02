@@ -1,19 +1,20 @@
 package com.dwolla.security.crypto
 
-import java.io._
-
 import cats.effect._
 import cats.syntax.all._
 import com.dwolla.security.crypto.Compression._
 import com.dwolla.security.crypto.Encryption._
 import com.dwolla.security.crypto.PgpLiteralDataPacketFormat._
+import com.dwolla.security.crypto.StreamableOutputStream.readOutputStream
 import io.chrisdavenport.log4cats.Logger
 import fs2._
-import fs2.io._
+import fs2.io.{readInputStream, toInputStream, writeOutputStream}
 import org.bouncycastle.bcpg._
 import org.bouncycastle.openpgp._
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory
 import org.bouncycastle.openpgp.operator.jcajce._
+
+import java.io._
 
 trait CryptoAlg[F[_]] {
   def encrypt(key: PGPPublicKey,
@@ -62,14 +63,14 @@ object CryptoAlg {
    *
    * Plaintext -> "Literal Data" Packetizer -> Compressor -> Encryptor -> OutputStream provided by caller
    */
-  private def encryptingOutputStream[F[_] : Sync : ContextShift : Clock](blocker: Blocker,
-                                                                         key: PGPPublicKey,
-                                                                         chunkSize: ChunkSize,
-                                                                         fileName: Option[String],
-                                                                         encryption: Encryption,
-                                                                         compression: Compression,
-                                                                         packetFormat: PgpLiteralDataPacketFormat,
-                                                                         outputStreamIntoWhichToWriteEncryptedBytes: OutputStream): Resource[F, OutputStream] =
+  private[crypto] def encryptingOutputStream[F[_] : Sync : ContextShift : Clock](blocker: Blocker,
+                                                                                 key: PGPPublicKey,
+                                                                                 chunkSize: ChunkSize,
+                                                                                 fileName: Option[String],
+                                                                                 encryption: Encryption,
+                                                                                 compression: Compression,
+                                                                                 packetFormat: PgpLiteralDataPacketFormat,
+                                                                                 outputStreamIntoWhichToWriteEncryptedBytes: OutputStream): Resource[F, OutputStream] =
     pgpGenerators[F](blocker, encryption, compression)
       .evalTap { case (pgpEncryptedDataGenerator, _, _) =>
         addKey[F](blocker)(pgpEncryptedDataGenerator, key)
@@ -77,9 +78,9 @@ object CryptoAlg {
       .evalMap { case (pgpEncryptedDataGenerator, pgpCompressedDataGenerator, pgpLiteralDataGenerator) =>
         for {
           now <- Clock[F].realTime(scala.concurrent.duration.MILLISECONDS).map(new java.util.Date(_))
-          encryptor <- blocker.delay(pgpEncryptedDataGenerator.open(outputStreamIntoWhichToWriteEncryptedBytes, Array.ofDim[Byte](chunkSize)))
+          encryptor <- blocker.delay(pgpEncryptedDataGenerator.open(outputStreamIntoWhichToWriteEncryptedBytes, Array.ofDim[Byte](chunkSize.value)))
           compressor <- blocker.delay(pgpCompressedDataGenerator.open(encryptor))
-          literalizer <- blocker.delay(pgpLiteralDataGenerator.open(compressor, packetFormat.tag, fileName.getOrElse(PGPLiteralData.CONSOLE), now, Array.ofDim[Byte](chunkSize)))
+          literalizer <- blocker.delay(pgpLiteralDataGenerator.open(compressor, packetFormat.tag, fileName.getOrElse(PGPLiteralData.CONSOLE), now, Array.ofDim[Byte](chunkSize.value)))
         } yield literalizer
       }
 
@@ -92,6 +93,7 @@ object CryptoAlg {
 
       private implicit val SLogger: Logger[Stream[F, *]] = Logger[F].mapK(Stream.functionKInstance[F])
       private val fingerprintCalculator = new JcaKeyFingerprintCalculator
+      private val closeStreamsAfterUse = false
 
       override def encrypt(key: PGPPublicKey,
                            chunkSize: ChunkSize,
@@ -101,10 +103,10 @@ object CryptoAlg {
                            packetFormat: PgpLiteralDataPacketFormat = Binary,
                           ): Pipe[F, Byte, Byte] =
         _.through { bytes =>
-          readOutputStream(blocker, chunkSize) { outputStreamToRead =>
+          readOutputStream(blocker) { outputStreamToRead =>
             Stream
               .resource(encryptingOutputStream[F](blocker, key, chunkSize, fileName, encryption, compression, packetFormat, outputStreamToRead))
-              .flatMap(wos => bytes.through(writeOutputStream(wos.pure[F], blocker)))
+              .flatMap(wos => bytes.through(writeOutputStream(wos.pure[F], blocker, closeStreamsAfterUse)))
               .compile
               .drain
           }
@@ -122,7 +124,7 @@ object CryptoAlg {
          */
         def pgpLiteralDataToBytes(pld: PGPLiteralData): Stream[F, Byte] =
           Logger[Stream[F, *]].trace(s"found literal data for file: ${pld.getFileName} and format: ${pld.getFormat}") >>
-            readInputStream(blocker.delay(pld.getDataStream), chunkSize, blocker)
+            readInputStream(blocker.delay(pld.getDataStream), chunkSize.value, blocker)
 
         def pgpEncryptedDataListToBytes(pedl: PGPEncryptedDataList): Stream[F, Byte] = {
           Logger[Stream[F, *]].trace(s"found ${pedl.size()} encrypted data packets") >>
@@ -139,26 +141,26 @@ object CryptoAlg {
         }
 
         def ignore(s: String): Stream[F, Byte] =
-          Logger[Stream[F, *]].trace(s"ignoring ${s}") >> Stream.empty
+          Logger[Stream[F, *]].trace(s"ignoring $s") >> Stream.empty
 
         pgpIS =>
           Stream.eval(Logger[F].trace("starting pgpInputStreamToByteStream")).drain ++
-          Stream.fromBlockingIterator[F](
-            blocker,
-            new PGPObjectFactory(pgpIS, fingerprintCalculator).iterator().asScala
-          )
-            .flatMap {
-              case _: PGPSignatureList => ignore("PGPSignatureList")
-              case _: PGPSecretKeyRing => ignore("PGPSecretKeyRing")
-              case _: PGPPublicKeyRing => ignore("PGPPublicKeyRing")
-              case _: PGPPublicKey => ignore("PGPPublicKey")
-              case x: PGPCompressedData => pgpCompressedDataToBytes(x)
-              case x: PGPLiteralData => pgpLiteralDataToBytes(x)
-              case x: PGPEncryptedDataList => pgpEncryptedDataListToBytes(x)
-              case _: PGPOnePassSignatureList => ignore("PGPOnePassSignatureList")
-              case _: PGPMarker => ignore("PGPMarker")
-              case other => Logger[Stream[F, *]].warn(s"found unexpected $other") >> Stream.empty
-            }
+            Stream.fromBlockingIterator[F](
+              blocker,
+              new PGPObjectFactory(pgpIS, fingerprintCalculator).iterator().asScala
+            )
+              .flatMap {
+                case _: PGPSignatureList => ignore("PGPSignatureList")
+                case _: PGPSecretKeyRing => ignore("PGPSecretKeyRing")
+                case _: PGPPublicKeyRing => ignore("PGPPublicKeyRing")
+                case _: PGPPublicKey => ignore("PGPPublicKey")
+                case x: PGPCompressedData => pgpCompressedDataToBytes(x)
+                case x: PGPLiteralData => pgpLiteralDataToBytes(x)
+                case x: PGPEncryptedDataList => pgpEncryptedDataListToBytes(x)
+                case _: PGPOnePassSignatureList => ignore("PGPOnePassSignatureList")
+                case _: PGPMarker => ignore("PGPMarker")
+                case other => Logger[Stream[F, *]].warn(s"found unexpected $other") >> Stream.empty
+              }
       }
 
       override def decrypt(key: PGPPrivateKey,
@@ -173,11 +175,12 @@ object CryptoAlg {
           .flatMap(pgpInputStreamToByteStream(key, chunkSize))
 
       override def armor(chunkSize: ChunkSize): Pipe[F, Byte, Byte] = bytes =>
-        readOutputStream(blocker, chunkSize) { out =>
+        readOutputStream(blocker) { out =>
           (for {
             armorer: OutputStream <- Resource.fromAutoCloseableBlocking(blocker)(blocker.delay(new ArmoredOutputStream(out)))
-            _ <- bytes.through(writeOutputStream(armorer.pure[F], blocker)).compile.resource.drain
+            _ <- bytes.through(writeOutputStream(armorer.pure[F], blocker, closeStreamsAfterUse)).compile.resource.drain
           } yield ()).use(_ => ().pure[F])
         }
+
     }
 }

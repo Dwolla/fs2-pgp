@@ -1,10 +1,11 @@
 package com.dwolla.security.crypto
 
-import java.io.ByteArrayOutputStream
-
 import cats.effect._
-import cats.effect.testing.scalatest.AsyncIOSpec
 import com.dwolla.testutils._
+import eu.timepit.refined.api.Refined
+import eu.timepit.refined.auto._
+import eu.timepit.refined.numeric.Positive
+import eu.timepit.refined.scalacheck.all._
 import io.chrisdavenport.log4cats.Logger
 import fs2._
 import org.bouncycastle.bcpg._
@@ -12,20 +13,25 @@ import org.bouncycastle.openpgp._
 import org.scalacheck.Arbitrary._
 import org.scalacheck._
 import org.scalatest.flatspec.AsyncFlatSpec
-import org.scalatest.matchers.should.Matchers
-import org.scalatestplus.scalacheck._
-import shapeless.tag
 
-class CryptoAlgSpec extends AsyncFlatSpec with AsyncIOSpec with Matchers with ScalaCheckPropertyChecks with PgpArbitraries {
+import java.io.ByteArrayOutputStream
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.{SynchronousQueue, ThreadPoolExecutor}
+
+class CryptoAlgSpec
+  extends AsyncFlatSpec
+    with Fs2PgpSpec {
   private implicit val noOpLogger: Logger[IO] = NoOpLogger[IO]()
-  private implicit def arbKeyPair[F[_] : Sync : ContextShift : Clock]: Arbitrary[Resource[F, PGPKeyPair]] = arbStrongKeyPair[F]
+
+  private implicit def arbKeyPair[F[_] : Sync : ContextShift : Clock]: Arbitrary[Resource[F, PGPKeyPair]] = arbWeakKeyPair[F]
 
   behavior of "CryptoAlg"
 
   private implicit def arbBytes: Arbitrary[Stream[Pure, Byte]] = Arbitrary {
     for {
-      bytes <- arbitrary[Seq[Byte]]
-    } yield Stream.emits(bytes)
+      count <- Gen.chooseNum(5000000, 20000000)
+      moreBytes <- Gen.listOfN(count, arbitrary[Byte])
+    } yield Stream.emits(moreBytes)
   }
 
   private def arbPgpBytes[F[_] : Sync : ContextShift : Clock]: Arbitrary[Resource[F, Array[Byte]]] = Arbitrary {
@@ -36,14 +42,37 @@ class CryptoAlgSpec extends AsyncFlatSpec with AsyncIOSpec with Matchers with Sc
   }
 
   private implicit val arbChunkSize: Arbitrary[ChunkSize] = Arbitrary {
-    Gen.chooseNum(1, 4096).map(tag[ChunkSizeTag][Int])
+    chooseRefinedNum[Refined, Int, Positive](1024, 4096).map(tagChunkSize)
+  }
+
+  it should "round trip the plaintext with a pathological ThreadPool" in {
+    forAll(MinSuccessful(1)) { (keyPairR: Resource[IO, PGPKeyPair],
+                                bytes: Stream[Pure, Byte],
+                                encryptionChunkSize: ChunkSize,
+                                decryptionChunkSize: ChunkSize) =>
+      for {
+        blocker <- Blocker.fromExecutorService[IO](IO {
+          new ThreadPoolExecutor(0, Int.MaxValue, 0L, SECONDS, new SynchronousQueue[Runnable])
+        })
+        crypto <- CryptoAlg[IO](blocker, removeOnClose = false)
+        keyPair <- keyPairR
+        roundTrip <- bytes
+          .through(crypto.encrypt(keyPair.getPublicKey, encryptionChunkSize))
+          .through(crypto.decrypt(keyPair.getPrivateKey, decryptionChunkSize))
+          .compile
+          .resource
+          .toList
+      } yield {
+        roundTrip should be(bytes.toList)
+      }
+    }
   }
 
   it should "round trip the plaintext" in {
-    forAll { (keyPairR: Resource[IO, PGPKeyPair],
-              bytes: Stream[Pure, Byte],
-              encryptionChunkSize: ChunkSize,
-              decryptionChunkSize: ChunkSize) =>
+    forAll(MinSuccessful(1)) { (keyPairR: Resource[IO, PGPKeyPair],
+                                bytes: Stream[Pure, Byte],
+                                encryptionChunkSize: ChunkSize,
+                                decryptionChunkSize: ChunkSize) =>
       for {
         blocker <- Blocker[IO]
         crypto <- CryptoAlg[IO](blocker, removeOnClose = false)
@@ -79,8 +108,4 @@ class CryptoAlgSpec extends AsyncFlatSpec with AsyncIOSpec with Matchers with Sc
       }
     }
   }
-
-  private implicit def ioCheckingAsserting[A]: CheckerAsserting[Resource[IO, A]] { type Result = IO[Unit] } =
-    new ResourceCheckerAsserting[IO, A]
-
 }

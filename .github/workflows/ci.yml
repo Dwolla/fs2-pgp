@@ -52,8 +52,8 @@ jobs:
       - name: Check that workflows are up to date
         run: sbt ++${{ matrix.scala }} githubWorkflowCheck
 
-      - name: Build project
-        run: sbt ++${{ matrix.scala }} test
+      - name: Build and test project
+        run: sbt ++${{ matrix.scala }} undeclaredCompileDependenciesTest unusedCompileDependenciesTest test
 
       - name: Compress target directories
         run: tar cf targets.tar target core/target tests/target testkit/target project/target
@@ -116,8 +116,6 @@ jobs:
         run: |
           tar xf targets.tar
           rm targets.tar
-
-      - uses: olafurpg/setup-gpg@v3
 
       - env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
