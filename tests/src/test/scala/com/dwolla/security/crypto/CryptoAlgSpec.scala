@@ -1,6 +1,7 @@
 package com.dwolla.security.crypto
 
 import cats.effect._
+import cats.effect.testing.scalatest.CatsResourceIO
 import com.dwolla.testutils._
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.auto._
@@ -12,26 +13,33 @@ import org.bouncycastle.bcpg._
 import org.bouncycastle.openpgp._
 import org.scalacheck.Arbitrary._
 import org.scalacheck._
-import org.scalatest.flatspec.AsyncFlatSpec
+import org.scalatest.flatspec._
 
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.{SynchronousQueue, ThreadPoolExecutor}
 
 class CryptoAlgSpec
-  extends AsyncFlatSpec
+  extends FixtureAsyncFlatSpec
+    with CatsResourceIO[Blocker]
     with Fs2PgpSpec {
+
+  override def resource: Resource[IO, Blocker] = Blocker[IO]
+
   private implicit val noOpLogger: Logger[IO] = NoOpLogger[IO]()
 
   private implicit def arbKeyPair[F[_] : Sync : ContextShift : Clock]: Arbitrary[Resource[F, PGPKeyPair]] = arbWeakKeyPair[F]
 
   behavior of "CryptoAlg"
 
-  private implicit def arbBytes: Arbitrary[Stream[Pure, Byte]] = Arbitrary {
+  private def genNBytesBetween(min: Int, max: Int): Gen[Stream[Pure, Byte]] =
     for {
-      count <- Gen.chooseNum(5000000, 20000000)
+      count <- Gen.chooseNum(min, Math.max(min, max))
       moreBytes <- Gen.listOfN(count, arbitrary[Byte])
     } yield Stream.emits(moreBytes)
+
+  private implicit val arbBytes: Arbitrary[Stream[Pure, Byte]] = Arbitrary {
+    genNBytesBetween(1 << 10, 1 << 20) // 1KB to 1MB
   }
 
   private def arbPgpBytes[F[_] : Sync : ContextShift : Clock]: Arbitrary[Resource[F, Array[Byte]]] = Arbitrary {
@@ -45,7 +53,7 @@ class CryptoAlgSpec
     chooseRefinedNum[Refined, Int, Positive](1024, 4096).map(tagChunkSize)
   }
 
-  it should "round trip the plaintext with a pathological ThreadPool" in {
+  it should "round trip the plaintext with a pathological ThreadPool" in { _ =>
     forAll(MinSuccessful(1)) { (keyPairR: Resource[IO, PGPKeyPair],
                                 bytes: Stream[Pure, Byte],
                                 encryptionChunkSize: ChunkSize,
@@ -68,31 +76,57 @@ class CryptoAlgSpec
     }
   }
 
-  it should "round trip the plaintext" in {
+  it should "round trip the plaintext" in { blocker =>
     forAll(MinSuccessful(1)) { (keyPairR: Resource[IO, PGPKeyPair],
-                                bytes: Stream[Pure, Byte],
+                                bytesG: Stream[Pure, Byte],
                                 encryptionChunkSize: ChunkSize,
                                 decryptionChunkSize: ChunkSize) =>
+      val materializedBytes: List[Byte] = bytesG.compile.toList
+      val bytes = Stream.emits(materializedBytes)
       for {
-        blocker <- Blocker[IO]
         crypto <- CryptoAlg[IO](blocker, removeOnClose = false)
         keyPair <- keyPairR
         roundTrip <- bytes
           .through(crypto.encrypt(keyPair.getPublicKey, encryptionChunkSize))
+          .through(crypto.armor(encryptionChunkSize))
           .through(crypto.decrypt(keyPair.getPrivateKey, decryptionChunkSize))
           .compile
           .resource
           .toList
       } yield {
-        roundTrip should be(bytes.toList)
+        roundTrip should be(materializedBytes)
       }
     }
   }
 
-  it should "support armoring a PGP value" in {
+  it should "maintain chunk size throughout pipeline" in { blocker =>
+    forAll { (keyPairR: Resource[IO, PGPKeyPair],
+              encryptionChunkSize: ChunkSize) =>
+      // since the cryptotext is compressed, we need to generate at least 10x the chunk size to
+      // be fairly confident that there will be at least one full-sized chunk
+      forAll(genNBytesBetween(encryptionChunkSize.value * 10, 1 << 16)) { (bytes: Stream[Pure, Byte]) =>
+        for {
+          crypto <- CryptoAlg[IO](blocker, removeOnClose = false)
+          keyPair <- keyPairR
+          chunkSizes <- bytes
+            .through(crypto.encrypt(keyPair.getPublicKey, encryptionChunkSize))
+            .through(crypto.armor(encryptionChunkSize))
+            .chunks
+            .map(_.size)
+            .compile
+            .resource
+            .to(Set)
+        } yield {
+          chunkSizes should contain(encryptionChunkSize.value)
+          chunkSizes should (have size 2L or have size 1L)
+        }
+      }
+    }
+  }
+
+  it should "support armoring a PGP value" in { blocker =>
     forAll(arbPgpBytes[IO].arbitrary) { (bytesR: Resource[IO, Array[Byte]]) =>
       for {
-        blocker <- Blocker[IO]
         crypto <- CryptoAlg[IO](blocker, removeOnClose = false)
         bytes <- bytesR
         armored <- Stream.emits(bytes).through(crypto.armor()).through(text.utf8Decode).compile.resource.string
