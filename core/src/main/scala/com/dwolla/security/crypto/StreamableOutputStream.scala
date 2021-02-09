@@ -72,16 +72,26 @@ object StreamableOutputStream {
         else
           (ByteVector.empty, none[ByteVector])
 
+      private val onFlush: F[Unit] =
+        for {
+          modified <- ref.modify(getAndClearBuffer).map(_.some)
+          _ <- enqueueIfModificationSucceeded(modified)
+        } yield ()
+
       private val onClose: F[Unit] =
         for {
-          modified <- ref.tryModify(getAndClearBuffer)
-          _ <- enqueueIfModificationSucceeded(modified)
+          _ <- onFlush
           _ <- queue.enqueue1(None)
         } yield ()
 
       private def write(b: ByteVector): Unit =
-        ref.tryModify(appendBytes(b))
+        ref.modify(appendBytes(b)).map(_.some)
           .flatMap(enqueueIfModificationSucceeded)
+          .toIO
+          .unsafeRunSync()
+
+      override def flush(): Unit =
+        onFlush
           .toIO
           .unsafeRunSync()
 
