@@ -5,6 +5,7 @@ import cats.effect.testing.scalatest._
 import cats.syntax.all._
 import com.dwolla.security.crypto.StreamableOutputStream.readOutputStream
 import com.dwolla.testutils._
+import eu.timepit.refined.auto._
 import io.chrisdavenport.log4cats.Logger
 import fs2._
 import org.bouncycastle.bcpg.{HashAlgorithmTags, PublicKeyAlgorithmTags, SymmetricKeyAlgorithmTags}
@@ -17,8 +18,8 @@ import org.scalatest.flatspec._
 
 class PGPKeyAlgSpec
   extends FixtureAsyncFlatSpec
-    with Fs2PgpSpec
     with CatsResourceIO[Blocker]
+    with Fs2PgpSpec
     with DateMatchers {
   private implicit val L: Logger[IO] = NoOpLogger[IO]()
   private implicit def arbKeyPair[F[_] : Sync : ContextShift : Clock]: Arbitrary[Resource[F, PGPKeyPair]] = arbStrongKeyPair[F]
@@ -112,7 +113,7 @@ class PGPKeyAlgSpec
               new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, "identity", sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA256), new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256, sha1Calc).setProvider("BC").build(passphrase))
             })
             armoredKey <-
-              readOutputStream(blocker) { os =>
+              readOutputStream(blocker, 4096) { os =>
                 blocker.delay(secretKey.encode(os))
               }
                 .through(crypto.armor())

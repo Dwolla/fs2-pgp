@@ -9,6 +9,7 @@ lazy val V = new {
   val catsEffectTestingScalatestScalacheck = "0.5.0"
   val refined = "0.9.20"
   val shapeless = "2.3.3"
+  val scodec = "1.1.23"
 }
 
 inThisBuild(List(
@@ -83,6 +84,7 @@ lazy val `fs2-pgp`: Project = (project in file("core"))
         "org.scala-lang.modules" %% "scala-collection-compat" % "2.2.0",
         "io.chrisdavenport" %% "log4cats-core" % log4catsV,
         "eu.timepit" %% "refined" % V.refined,
+        "org.scodec" %% "scodec-bits" % "1.1.23",
       )
     },
     unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),

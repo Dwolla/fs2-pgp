@@ -103,10 +103,10 @@ object CryptoAlg {
                            packetFormat: PgpLiteralDataPacketFormat = Binary,
                           ): Pipe[F, Byte, Byte] =
         _.through { bytes =>
-          readOutputStream(blocker) { outputStreamToRead =>
+          readOutputStream(blocker, chunkSize) { outputStreamToRead =>
             Stream
               .resource(encryptingOutputStream[F](blocker, key, chunkSize, fileName, encryption, compression, packetFormat, outputStreamToRead))
-              .flatMap(wos => bytes.through(writeOutputStream(wos.pure[F], blocker, closeStreamsAfterUse)))
+              .flatMap(wos => bytes.chunkN(chunkSize.value).flatMap(Stream.chunk).through(writeOutputStream(wos.pure[F], blocker, closeStreamsAfterUse)))
               .compile
               .drain
           }
@@ -144,7 +144,7 @@ object CryptoAlg {
           Logger[Stream[F, *]].trace(s"ignoring $s") >> Stream.empty
 
         pgpIS =>
-          Stream.eval(Logger[F].trace("starting pgpInputStreamToByteStream")).drain ++
+          Logger[Stream[F, *]].trace("starting pgpInputStreamToByteStream") >>
             Stream.fromBlockingIterator[F](
               blocker,
               new PGPObjectFactory(pgpIS, fingerprintCalculator).iterator().asScala
@@ -174,12 +174,15 @@ object CryptoAlg {
           }
           .flatMap(pgpInputStreamToByteStream(key, chunkSize))
 
+      private def writeToArmorer(armorer: OutputStream): Pipe[F, Byte, Unit] =
+        _.through(writeOutputStream(armorer.pure[F], blocker, closeStreamsAfterUse))
+
       override def armor(chunkSize: ChunkSize): Pipe[F, Byte, Byte] = bytes =>
-        readOutputStream(blocker) { out =>
-          (for {
-            armorer: OutputStream <- Resource.fromAutoCloseableBlocking(blocker)(blocker.delay(new ArmoredOutputStream(out)))
-            _ <- bytes.through(writeOutputStream(armorer.pure[F], blocker, closeStreamsAfterUse)).compile.resource.drain
-          } yield ()).use(_ => ().pure[F])
+        readOutputStream(blocker, chunkSize) { out =>
+          Stream.resource(Resource.fromAutoCloseableBlocking(blocker)(blocker.delay(new ArmoredOutputStream(out))))
+            .flatMap(writeToArmorer(_)(bytes))
+            .compile
+            .drain
         }
 
     }
