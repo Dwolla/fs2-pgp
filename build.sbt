@@ -1,6 +1,6 @@
 lazy val V = new {
-  val SCALA_2_12 = "2.12.12"
-  val SCALA_2_13 = "2.13.4"
+  val SCALA_2_12 = "2.12.13"
+  val SCALA_2_13 = "2.13.5"
   val Scalas = Seq(SCALA_2_13, SCALA_2_12)
   val cats = "2.3.1"
   val catsEffect = "2.3.1"
@@ -27,6 +27,7 @@ inThisBuild(List(
     )
   ),
   githubWorkflowTargetTags ++= Seq("v*"),
+  githubWorkflowJavaVersions := Seq("adopt@1.8", "adopt@1.11"),
   githubWorkflowPublishTargetBranches :=
     Seq(RefPredicate.StartsWith(Ref.Tag("v"))),
   githubWorkflowBuild := Seq(WorkflowStep.Sbt(List("undeclaredCompileDependenciesTest", "unusedCompileDependenciesTest", "test"), name = Some("Build and test project"))),
@@ -46,11 +47,8 @@ inThisBuild(List(
 
 lazy val commonSettings = Seq(
   startYear := Option(2020),
-  resolvers ++= Seq(
-    Resolver.bintrayRepo("dwolla", "maven")
-  ),
   resolvers += Resolver.sonatypeRepo("releases"),
-  addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.2" cross CrossVersion.full),
+  addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.3" cross CrossVersion.full),
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
   Compile / scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
@@ -100,7 +98,7 @@ lazy val tests = (project in file("tests"))
         "eu.timepit" %% "refined-scalacheck" % V.refined % Test,
       )
     },
-    skip in publish := true,
+    publish / skip := true,
   ) ++ commonSettings: _*)
   .dependsOn(`fs2-pgp`, `pgp-testkit`)
 
@@ -128,5 +126,5 @@ lazy val `pgp-testkit`: Project = (project in file("testkit"))
   .dependsOn(`fs2-pgp`)
 
 lazy val `fs2-pgp-root` = (project in file("."))
-  .settings(skip in publish := true)
+  .settings(publish / skip := true)
   .aggregate(`fs2-pgp`, tests, `pgp-testkit`)

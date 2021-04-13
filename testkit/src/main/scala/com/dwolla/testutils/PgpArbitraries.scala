@@ -1,5 +1,6 @@
 package com.dwolla.testutils
 
+import cats._
 import cats.effect._
 import cats.syntax.all._
 import com.dwolla.security.crypto.BouncyCastleResource
@@ -49,11 +50,11 @@ trait PgpArbitraries {
       }
   }
 
-  implicit def arbPgpPublicKey[F[_] : Sync : ContextShift : Clock](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Arbitrary[Resource[F, PGPPublicKey]] = Arbitrary {
+  implicit def arbPgpPublicKey[F[_] : Applicative](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Arbitrary[Resource[F, PGPPublicKey]] = Arbitrary {
     arbitrary[Resource[F, PGPKeyPair]].map(_.map(_.getPublicKey))
   }
 
-  implicit def arbPgpPrivateKey[F[_] : Sync : ContextShift : Clock](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Arbitrary[Resource[F, PGPPrivateKey]] = Arbitrary {
+  implicit def arbPgpPrivateKey[F[_] : Applicative](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Arbitrary[Resource[F, PGPPrivateKey]] = Arbitrary {
     arbitrary[Resource[F, PGPKeyPair]].map(_.map(_.getPrivateKey))
   }
 }
