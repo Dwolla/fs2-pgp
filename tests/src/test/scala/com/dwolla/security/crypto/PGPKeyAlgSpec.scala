@@ -3,11 +3,11 @@ package com.dwolla.security.crypto
 import cats.effect._
 import cats.effect.testing.scalatest._
 import cats.syntax.all._
-import com.dwolla.security.crypto.StreamableOutputStream.readOutputStream
 import com.dwolla.testutils._
 import eu.timepit.refined.auto._
-import io.chrisdavenport.log4cats.Logger
+import org.typelevel.log4cats.Logger
 import fs2._
+import fs2.io.readOutputStream
 import org.bouncycastle.bcpg.{HashAlgorithmTags, PublicKeyAlgorithmTags, SymmetricKeyAlgorithmTags}
 import org.bouncycastle.openpgp._
 import org.bouncycastle.openpgp.operator.PGPDigestCalculator
@@ -108,7 +108,7 @@ class PGPKeyAlgSpec
         val armoredKey =
           (for {
             crypto <- CryptoAlg[IO](blocker, removeOnClose = false)
-            secretKey <- Resource.liftF(blocker.delay {
+            secretKey <- Resource.eval(blocker.delay {
               val sha1Calc: PGPDigestCalculator = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1)
               new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, "identity", sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA256), new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256, sha1Calc).setProvider("BC").build(passphrase))
             })

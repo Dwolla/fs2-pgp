@@ -5,10 +5,9 @@ import cats.syntax.all._
 import com.dwolla.security.crypto.Compression._
 import com.dwolla.security.crypto.Encryption._
 import com.dwolla.security.crypto.PgpLiteralDataPacketFormat._
-import com.dwolla.security.crypto.StreamableOutputStream.readOutputStream
-import io.chrisdavenport.log4cats.Logger
+import org.typelevel.log4cats.Logger
 import fs2._
-import fs2.io.{readInputStream, toInputStream, writeOutputStream}
+import fs2.io.{readInputStream, toInputStream, writeOutputStream, readOutputStream}
 import org.bouncycastle.bcpg._
 import org.bouncycastle.openpgp._
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory
@@ -103,7 +102,7 @@ object CryptoAlg {
                            packetFormat: PgpLiteralDataPacketFormat = Binary,
                           ): Pipe[F, Byte, Byte] =
         _.through { bytes =>
-          readOutputStream(blocker, chunkSize) { outputStreamToRead =>
+          readOutputStream(blocker, chunkSize.value) { outputStreamToRead =>
             Stream
               .resource(encryptingOutputStream[F](blocker, key, chunkSize, fileName, encryption, compression, packetFormat, outputStreamToRead))
               .flatMap(wos => bytes.chunkN(chunkSize.value).flatMap(Stream.chunk).through(writeOutputStream(wos.pure[F], blocker, closeStreamsAfterUse)))
@@ -178,7 +177,7 @@ object CryptoAlg {
         _.through(writeOutputStream(armorer.pure[F], blocker, closeStreamsAfterUse))
 
       override def armor(chunkSize: ChunkSize): Pipe[F, Byte, Byte] = bytes =>
-        readOutputStream(blocker, chunkSize) { out =>
+        readOutputStream(blocker, chunkSize.value) { out =>
           Stream.resource(Resource.fromAutoCloseableBlocking(blocker)(blocker.delay(new ArmoredOutputStream(out))))
             .flatMap(writeToArmorer(_)(bytes))
             .compile

@@ -7,7 +7,7 @@ import eu.timepit.refined.api.Refined
 import eu.timepit.refined.auto._
 import eu.timepit.refined.numeric.Positive
 import eu.timepit.refined.scalacheck.all._
-import io.chrisdavenport.log4cats.Logger
+import org.typelevel.log4cats.Logger
 import fs2._
 import org.bouncycastle.bcpg._
 import org.bouncycastle.openpgp._
@@ -130,7 +130,7 @@ class CryptoAlgSpec
         crypto <- CryptoAlg[IO](blocker, removeOnClose = false)
         bytes <- bytesR
         armored <- Stream.emits(bytes).through(crypto.armor()).through(text.utf8Decode).compile.resource.string
-        expected <- Resource.liftF {
+        expected <- Resource.eval {
           for {
             out <- IO(new ByteArrayOutputStream())
             _ <- Resource.fromAutoCloseableBlocking(blocker)(IO(new ArmoredOutputStream(out))).evalMap(arm => IO(arm.write(bytes))).use(_ => IO.unit)
