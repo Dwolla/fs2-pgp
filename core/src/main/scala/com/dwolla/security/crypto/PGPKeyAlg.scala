@@ -5,6 +5,7 @@ import java.nio.charset.Charset
 
 import cats._
 import cats.effect._
+import cats.syntax.all._
 import fs2._
 import org.bouncycastle.openpgp._
 import org.bouncycastle.openpgp.operator.bc.{BcPBESecretKeyDecryptorBuilder, BcPGPDigestCalculatorProvider}
@@ -13,6 +14,7 @@ import org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator
 trait PGPKeyAlg[F[_]] {
   def readPublicKey(key: String): F[PGPPublicKey]
   def readPrivateKey(key: String, passphrase: Array[Char] = Array.empty[Char]): F[PGPPrivateKey]
+  def readSecretKeyCollection(keys: String): F[PGPSecretKeyRingCollection]
 }
 
 object PGPKeyAlg {
@@ -44,6 +46,11 @@ object PGPKeyAlg {
           .compile
           .lastOrError
 
+      override def readSecretKeyCollection(keys: String): F[PGPSecretKeyRingCollection] =
+        Stream.eval(secretKeyRingCollection(keys))
+          .compile
+          .lastOrError
+
       private def keyBytes(armored: String): G[ByteArrayInputStream] =
         blocker.delay {
           new ByteArrayInputStream(armored.getBytes(Charset.forName("UTF-8")))
@@ -59,12 +66,17 @@ object PGPKeyAlg {
           key <- Stream.fromBlockingIterator(blocker, keyRing.getPublicKeys.asScala)
         } yield key
 
+      private def secretKeyRingCollection(keys: String): G[PGPSecretKeyRingCollection] =
+        for {
+          is <- keyBytes(keys)
+          keyRingCollection <- blocker.delay {
+            new PGPSecretKeyRingCollection(PGPUtil.getDecoderStream(is), new JcaKeyFingerprintCalculator())
+          }
+        } yield keyRingCollection
+
       private def secretKeyStream(key: String): Stream[G, PGPSecretKey] =
         for {
-          is <- Stream.eval(keyBytes(key))
-          keyRingCollection <- Stream.eval(blocker.delay {
-            new PGPSecretKeyRingCollection(PGPUtil.getDecoderStream(is), new JcaKeyFingerprintCalculator())
-          })
+          keyRingCollection <- Stream.eval(secretKeyRingCollection(key))
           keyRing <- Stream.fromBlockingIterator(blocker, keyRingCollection.getKeyRings.asScala)
           secretKey <- Stream.fromBlockingIterator(blocker, keyRing.getSecretKeys.asScala)
         } yield secretKey
