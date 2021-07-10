@@ -7,17 +7,19 @@ import eu.timepit.refined.api.Refined
 import eu.timepit.refined.auto._
 import eu.timepit.refined.numeric.Positive
 import eu.timepit.refined.scalacheck.all._
-import org.typelevel.log4cats.Logger
 import fs2._
 import org.bouncycastle.bcpg._
 import org.bouncycastle.openpgp._
+import org.bouncycastle.openpgp.operator.jcajce.{JcaPGPContentSignerBuilder, JcaPGPDigestCalculatorProviderBuilder, JcePBESecretKeyEncryptorBuilder}
 import org.scalacheck.Arbitrary._
 import org.scalacheck._
 import org.scalatest.flatspec._
+import org.typelevel.log4cats.Logger
 
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.{SynchronousQueue, ThreadPoolExecutor}
+import scala.jdk.CollectionConverters._
 
 class CryptoAlgSpec
   extends FixtureAsyncFlatSpec
@@ -142,4 +144,76 @@ class CryptoAlgSpec
       }
     }
   }
+
+  it should "round trip the plaintext using a key ring collection" in { blocker =>
+    forAll(MinSuccessful(1)) { (keyPairR: Resource[IO, PGPKeyPair],
+                                bytesG: Stream[Pure, Byte],
+                                encryptionChunkSize: ChunkSize,
+                                decryptionChunkSize: ChunkSize,
+                                keyRingId: String,
+                                passphrase: Array[Char]) =>
+      val materializedBytes: List[Byte] = bytesG.compile.toList
+
+      for {
+        crypto <- CryptoAlg[IO](blocker, removeOnClose = false)
+        kp <- keyPairR
+        generator <- Resource.eval(pgpKeyRingGenerator[IO](keyRingId, kp, passphrase))
+        collection = new PGPSecretKeyRingCollection(List(generator.generateSecretKeyRing()).asJava)
+        roundTrip <- Stream.emits(materializedBytes)
+          .through(crypto.encrypt(kp.getPublicKey, encryptionChunkSize))
+          .through(crypto.armor(encryptionChunkSize))
+          .through(crypto.decryptUsingRingCollection(collection, Array.empty, decryptionChunkSize))
+          .compile
+          .resource
+          .toList
+      } yield {
+        roundTrip should be(materializedBytes)
+      }
+    }
+  }
+
+  it should "round trip the plaintext using a key ring" in { blocker =>
+    forAll(MinSuccessful(1)) { (keyPairR: Resource[IO, PGPKeyPair],
+                                bytesG: Stream[Pure, Byte],
+                                encryptionChunkSize: ChunkSize,
+                                decryptionChunkSize: ChunkSize,
+                                keyRingId: String,
+                                passphrase: Array[Char]) =>
+      val materializedBytes: List[Byte] = bytesG.compile.toList
+
+      for {
+        crypto <- CryptoAlg[IO](blocker, removeOnClose = false)
+        kp <- keyPairR
+        ring <- Resource.eval(pgpKeyRingGenerator[IO](keyRingId, kp, passphrase)).map(_.generateSecretKeyRing())
+        roundTrip <- Stream.emits(materializedBytes)
+          .through(crypto.encrypt(kp.getPublicKey, encryptionChunkSize))
+          .through(crypto.armor(encryptionChunkSize))
+          .through(crypto.decryptUsingRing(ring, Array.empty, decryptionChunkSize))
+          .compile
+          .resource
+          .toList
+      } yield {
+        roundTrip should be(materializedBytes)
+      }
+    }
+  }
+
+  private def pgpKeyRingGenerator[F[_] : Sync](keyRingId: String,
+                                               keyPair: PGPKeyPair,
+                                               passphrase: Array[Char]): F[PGPKeyRingGenerator] =
+    Sync[F].delay {
+      val pgpContentSignerBuilder = new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA1)
+      val dc = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1)
+      val keyEncryptor = new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.CAST5).build(passphrase)
+
+      new PGPKeyRingGenerator(PGPSignature.POSITIVE_CERTIFICATION,
+        keyPair,
+        keyRingId,
+        dc,
+        null,
+        null,
+        pgpContentSignerBuilder,
+        keyEncryptor
+      )
+    }
 }
