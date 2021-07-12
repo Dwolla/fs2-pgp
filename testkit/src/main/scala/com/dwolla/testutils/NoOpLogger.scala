@@ -4,7 +4,7 @@ import java.time.Instant
 
 import cats.effect._
 import cats.syntax.all._
-import io.chrisdavenport.log4cats._
+import org.typelevel.log4cats._
 
 import scala.concurrent.duration._
 

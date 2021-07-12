@@ -1,15 +1,16 @@
 lazy val V = new {
-  val SCALA_2_12 = "2.12.13"
-  val SCALA_2_13 = "2.13.5"
+  val SCALA_2_12 = "2.12.14"
+  val SCALA_2_13 = "2.13.6"
   val Scalas = Seq(SCALA_2_13, SCALA_2_12)
-  val cats = "2.3.1"
-  val catsEffect = "2.3.1"
-  val bouncyCastle = "1.66"
+  val cats = "2.6.1"
+  val catsEffect = "2.5.1"
+  val fs2 = "2.5.8"
+  val bouncyCastle = "1.69"
   val scalaTest = "3.2.3"
   val catsEffectTestingScalatestScalacheck = "0.5.0"
   val refined = "0.9.20"
-  val shapeless = "2.3.3"
-  val scodec = "1.1.23"
+  val shapeless = "2.3.7"
+  val log4cats = "1.3.1"
 }
 
 inThisBuild(List(
@@ -48,7 +49,7 @@ inThisBuild(List(
 lazy val commonSettings = Seq(
   startYear := Option(2020),
   resolvers += Resolver.sonatypeRepo("releases"),
-  addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.3" cross CrossVersion.full),
+  addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.13.0" cross CrossVersion.full),
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
   Compile / scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
@@ -68,21 +69,17 @@ lazy val `fs2-pgp`: Project = (project in file("core"))
   .settings(Seq(
     description := "fs2 pipes for encrypting and decrypting streams with BouncyCastle PGP",
     libraryDependencies ++= {
-      val fs2V = "2.5.0"
-      val log4catsV = "1.1.1"
-
       Seq(
         "org.typelevel" %% "cats-core" % V.cats,
         "org.typelevel" %% "cats-effect" % V.catsEffect,
         "org.bouncycastle" % "bcpg-jdk15on" % V.bouncyCastle,
         "org.bouncycastle" % "bcprov-jdk15on" % V.bouncyCastle,
-        "co.fs2" %% "fs2-core" % fs2V,
-        "co.fs2" %% "fs2-io" % fs2V,
+        "co.fs2" %% "fs2-core" % V.fs2,
+        "co.fs2" %% "fs2-io" % V.fs2,
         "com.chuusai" %% "shapeless" % V.shapeless,
         "org.scala-lang.modules" %% "scala-collection-compat" % "2.2.0",
-        "io.chrisdavenport" %% "log4cats-core" % log4catsV,
+        "org.typelevel" %% "log4cats-core" % V.log4cats,
         "eu.timepit" %% "refined" % V.refined,
-        "org.scodec" %% "scodec-bits" % "1.1.23",
       )
     },
     unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),
@@ -110,7 +107,7 @@ lazy val `pgp-testkit`: Project = (project in file("testkit"))
         "org.bouncycastle" % "bcpg-jdk15on" % V.bouncyCastle,
         "org.bouncycastle" % "bcprov-jdk15on" % V.bouncyCastle % Runtime,
         "com.codecommit" %% "cats-effect-testing-scalatest-scalacheck" % V.catsEffectTestingScalatestScalacheck,
-        "io.chrisdavenport" %% "log4cats-core" % "1.1.1",
+        "org.typelevel" %% "log4cats-core" % V.log4cats,
         "org.scalacheck" %% "scalacheck" % "1.15.2",
         "org.scalactic" %% "scalactic" % "3.2.3",
         "org.scalatest" %% "scalatest-core" % "3.2.3",
