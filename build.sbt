@@ -32,6 +32,9 @@ inThisBuild(List(
   githubWorkflowJavaVersions := Seq("adopt@1.8", "adopt@1.11"),
   githubWorkflowPublishTargetBranches :=
     Seq(RefPredicate.StartsWith(Ref.Tag("v"))),
+  githubWorkflowBuildPreamble ++= Seq(
+    WorkflowStep.Run(List("sudo apt-get install haveged"), name = Option("Install haveged"))
+  ),
   githubWorkflowBuild := Seq(WorkflowStep.Sbt(List("undeclaredCompileDependenciesTest", "unusedCompileDependenciesTest", "test"), name = Some("Build and test project"))),
   githubWorkflowPublish := Seq(WorkflowStep.Sbt(List("ci-release"))),
   githubWorkflowPublish := Seq(
