@@ -11,6 +11,7 @@ lazy val V = new {
   val refined = "0.9.20"
   val shapeless = "2.3.7"
   val log4cats = "1.3.1"
+  val catsScalacheck = "0.3.0"
 }
 
 inThisBuild(List(
@@ -27,14 +28,11 @@ inThisBuild(List(
       url("https://dwolla.com")
     )
   ),
-  githubWorkflowUseSbtThinClient := false,
+//  githubWorkflowUseSbtThinClient := false,
   githubWorkflowTargetTags ++= Seq("v*"),
   githubWorkflowJavaVersions := Seq("adopt@1.8", "adopt@1.11"),
   githubWorkflowPublishTargetBranches :=
     Seq(RefPredicate.StartsWith(Ref.Tag("v"))),
-  githubWorkflowBuildPreamble ++= Seq(
-    WorkflowStep.Run(List("sudo apt-get install haveged"), name = Option("Install haveged"))
-  ),
   githubWorkflowBuild := Seq(WorkflowStep.Sbt(List("undeclaredCompileDependenciesTest", "unusedCompileDependenciesTest", "test"), name = Some("Build and test project"))),
   githubWorkflowPublish := Seq(WorkflowStep.Sbt(List("ci-release"))),
   githubWorkflowPublish := Seq(
@@ -97,6 +95,7 @@ lazy val tests = (project in file("tests"))
         "org.scalatest" %% "scalatest" % V.scalaTest % Test,
         "com.codecommit" %% "cats-effect-testing-scalatest-scalacheck" % V.catsEffectTestingScalatestScalacheck % Test,
         "eu.timepit" %% "refined-scalacheck" % V.refined % Test,
+        "io.chrisdavenport" %% "cats-scalacheck" % V.catsScalacheck % Test,
       )
     },
     publish / skip := true,
