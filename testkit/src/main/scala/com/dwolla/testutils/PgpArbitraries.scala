@@ -30,7 +30,7 @@ trait PgpArbitraries {
   }
 
   def arbWeakKeyPair[F[_] : Sync : ContextShift : Clock]: Arbitrary[Resource[F, PGPKeyPair]] =
-    arbKeyPair[F](384)
+    arbKeyPair[F](512)
 
   def arbKeyPair[F[_] : Sync : ContextShift : Clock](keySize: KeySize): Arbitrary[Resource[F, PGPKeyPair]] = Arbitrary {
     Blocker[F]
