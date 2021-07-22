@@ -27,7 +27,7 @@ class CryptoAlgSpec1
     with CryptoArbitraries
     with Fs2PgpSpec {
 
-  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_))
+  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_, removeOnClose = false))
 
   private implicit val noOpLogger: Logger[IO] = NoOpLogger[IO]()
 
@@ -62,7 +62,7 @@ class CryptoAlgSpec2
     with CryptoArbitraries
     with Fs2PgpSpec {
 
-  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_))
+  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_, removeOnClose = false))
 
   private implicit val noOpLogger: Logger[IO] = NoOpLogger[IO]()
 
@@ -99,7 +99,7 @@ class CryptoAlgSpec3
     with CryptoArbitraries
     with Fs2PgpSpec {
 
-  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_))
+  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_, removeOnClose = false))
 
   private implicit val noOpLogger: Logger[IO] = NoOpLogger[IO]()
 
@@ -131,7 +131,7 @@ class CryptoAlgSpec4
     with CryptoArbitraries
     with Fs2PgpSpec {
 
-  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_))
+  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_, removeOnClose = false))
 
   private implicit val noOpLogger: Logger[IO] = NoOpLogger[IO]()
 
@@ -183,7 +183,7 @@ class CryptoAlgSpec5
     with CryptoArbitraries
     with Fs2PgpSpec {
 
-  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_))
+  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_, removeOnClose = false))
 
   private implicit val noOpLogger: Logger[IO] = NoOpLogger[IO]()
 
