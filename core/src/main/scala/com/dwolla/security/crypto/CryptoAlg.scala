@@ -124,6 +124,10 @@ object CryptoAlg {
       import scala.jdk.CollectionConverters._
 
       private implicit val SLogger: Logger[Stream[F, *]] = Logger[F].mapK(Stream.functionKInstance[F])
+
+      private val ccdf = CanCreateDecryptorFactory.blockingInstances[F](blocker)
+      import ccdf._
+
       private val fingerprintCalculator = new JcaKeyFingerprintCalculator
       private val closeStreamsAfterUse = false
 
@@ -166,7 +170,7 @@ object CryptoAlg {
                 case pbe: PGPPublicKeyEncryptedData =>
                   CanCreateDecryptorFactory[F, A]
                     .publicKeyDataDecryptorFactory(keylike, pbe.getKeyID, passphrase)
-                    .flatMap(factory => Sync[F].delay(pbe.getDataStream(factory)))
+                    .flatMap(factory => blocker.delay(pbe.getDataStream(factory)))
                 case other =>
                   Logger[F].error(EncryptionTypeError)(s"found wrong type of encrypted data: $other") >>
                     EncryptionTypeError.raiseError[F, InputStream]

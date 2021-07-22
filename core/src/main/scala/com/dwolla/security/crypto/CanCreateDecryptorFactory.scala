@@ -7,27 +7,17 @@ import org.bouncycastle.openpgp.operator.PublicKeyDataDecryptorFactory
 import org.bouncycastle.openpgp.operator.bc.{BcPBESecretKeyDecryptorBuilder, BcPGPDigestCalculatorProvider, BcPublicKeyDataDecryptorFactory}
 import org.bouncycastle.openpgp.{PGPPrivateKey, PGPSecretKey, PGPSecretKeyRing, PGPSecretKeyRingCollection}
 
-import scala.language.reflectiveCalls
-
 trait CanCreateDecryptorFactory[F[_], A] {
   def publicKeyDataDecryptorFactory(input: A, keyId: Long, passphrase: Array[Char]): F[PublicKeyDataDecryptorFactory]
 }
 
-object CanCreateDecryptorFactory {
-  def apply[F[_], A](implicit DFF: CanCreateDecryptorFactory[F, A]): CanCreateDecryptorFactory[F, A] = DFF
-
-  implicit def PGPSecretKeyRingCollectionInstance[F[_] : Sync]: CanCreateDecryptorFactory[F, PGPSecretKeyRingCollection] =
-    reflectiveDecryptorFactoryFactoryInstance(_, _, _)
-
-  implicit def PGPSecretKeyRingInstance[F[_] : Sync]: CanCreateDecryptorFactory[F, PGPSecretKeyRing] =
-    reflectiveDecryptorFactoryFactoryInstance(_, _, _)
-
-  private def reflectiveDecryptorFactoryFactoryInstance[F[_] : Sync, A <: {def getSecretKey(keyId: Long): PGPSecretKey}](input: A,
-                                                                                                                         keyId: Long,
-                                                                                                                         passphrase: Array[Char]): F[PublicKeyDataDecryptorFactory] =
-    OptionT.fromOption[F](Option(input.getSecretKey(keyId)))
+class BlockingCanCreateDecryptorFactories[F[_] : Sync : ContextShift](blocker: Blocker) {
+  private def secretKeyInstance(input: Option[PGPSecretKey],
+                                keyId: Long,
+                                passphrase: Array[Char]): F[PublicKeyDataDecryptorFactory] =
+    OptionT.fromOption[F](input)
       .semiflatMap { secretKey =>
-        Sync[F].delay {
+        blocker.delay {
           val digestCalculatorProvider = new BcPGPDigestCalculatorProvider()
           val decryptor = new BcPBESecretKeyDecryptorBuilder(digestCalculatorProvider).build(passphrase)
           val key = secretKey.extractPrivateKey(decryptor)
@@ -36,8 +26,23 @@ object CanCreateDecryptorFactory {
       }
       .getOrElseF(KeyRingMissingKeyException(keyId).raiseError[F, PublicKeyDataDecryptorFactory])
 
-  implicit def PGPPrivateKeyInstance[F[_] : Sync]: CanCreateDecryptorFactory[F, PGPPrivateKey] =
+  implicit def PGPSecretKeyRingCollectionInstance: CanCreateDecryptorFactory[F, PGPSecretKeyRingCollection] =
+    (input: PGPSecretKeyRingCollection, keyId: Long, passphrase: Array[Char]) =>
+      secretKeyInstance(Option(input.getSecretKey(keyId)), keyId, passphrase)
+
+  implicit def PGPSecretKeyRingInstance: CanCreateDecryptorFactory[F, PGPSecretKeyRing] =
+    (input: PGPSecretKeyRing, keyId: Long, passphrase: Array[Char]) =>
+      secretKeyInstance(Option(input.getSecretKey(keyId)), keyId, passphrase)
+
+  implicit def PGPPrivateKeyInstance: CanCreateDecryptorFactory[F, PGPPrivateKey] =
     (input: PGPPrivateKey, keyId, _) =>
       if (input.getKeyID != keyId) KeyMismatchException(input.getKeyID, keyId).raiseError[F, PublicKeyDataDecryptorFactory]
-      else Sync[F].delay(new BcPublicKeyDataDecryptorFactory(input))
+      else blocker.delay(new BcPublicKeyDataDecryptorFactory(input))
+}
+
+object CanCreateDecryptorFactory {
+  def apply[F[_], A](implicit DFF: CanCreateDecryptorFactory[F, A]): CanCreateDecryptorFactory[F, A] = DFF
+
+  def blockingInstances[F[_] : Sync : ContextShift](blocker: Blocker) =
+    new BlockingCanCreateDecryptorFactories[F](blocker)
 }
