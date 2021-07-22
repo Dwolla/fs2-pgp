@@ -116,10 +116,9 @@ object CryptoAlg {
         } yield literalizer
       }
 
-  def apply[F[_] : ConcurrentEffect : ContextShift : Clock : Logger](blocker: Blocker,
-                                                                     removeOnClose: Boolean = true): Resource[F, CryptoAlg[F]] =
+  def apply[F[_] : ConcurrentEffect : ContextShift : Clock : Logger](blocker: Blocker): Resource[F, CryptoAlg[F]] =
     for {
-      _ <- BouncyCastleResource[F](blocker, removeOnClose)
+      _ <- BouncyCastleResource[F](blocker)
     } yield new CryptoAlg[F] {
       import scala.jdk.CollectionConverters._
 

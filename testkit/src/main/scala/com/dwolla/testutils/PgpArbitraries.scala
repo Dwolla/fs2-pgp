@@ -34,7 +34,7 @@ trait PgpArbitraries {
 
   def arbKeyPair[F[_] : Sync : ContextShift : Clock](keySize: KeySize): Arbitrary[Resource[F, PGPKeyPair]] = Arbitrary {
     Blocker[F]
-      .flatMap(BouncyCastleResource[F](_, removeOnClose = false))
+      .flatMap(BouncyCastleResource[F](_))
       .evalMap { _ =>
         for {
           pair <- Sync[F].delay {

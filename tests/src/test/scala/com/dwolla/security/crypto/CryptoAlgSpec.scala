@@ -27,7 +27,7 @@ class CryptoAlgSpec1
     with CryptoArbitraries
     with Fs2PgpSpec {
 
-  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_, removeOnClose = false))
+  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_))
 
   private implicit val noOpLogger: Logger[IO] = NoOpLogger[IO]()
 
@@ -62,7 +62,7 @@ class CryptoAlgSpec2
     with CryptoArbitraries
     with Fs2PgpSpec {
 
-  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_, removeOnClose = false))
+  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_))
 
   private implicit val noOpLogger: Logger[IO] = NoOpLogger[IO]()
 
@@ -99,7 +99,7 @@ class CryptoAlgSpec3
     with CryptoArbitraries
     with Fs2PgpSpec {
 
-  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_, removeOnClose = false))
+  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_))
 
   private implicit val noOpLogger: Logger[IO] = NoOpLogger[IO]()
 
@@ -127,21 +127,22 @@ class CryptoAlgSpec3
 
 class CryptoAlgSpec4
   extends FixtureAsyncFlatSpec
-    with CatsResourceIO[CryptoAlg[IO]]
+    with CatsResourceIO[(Blocker, CryptoAlg[IO])]
     with CryptoArbitraries
     with Fs2PgpSpec {
 
-  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_, removeOnClose = false))
+  override def resource: Resource[IO, (Blocker, CryptoAlg[IO])] = Blocker[IO].mproduct(CryptoAlg[IO](_))
 
   private implicit val noOpLogger: Logger[IO] = NoOpLogger[IO]()
 
   behavior of "CryptoAlg"
 
-  def genPGPSecretKeyRingCollection[F[_] : Sync : ContextShift : Clock](passphrase: Array[Char]): Gen[Resource[F, PGPSecretKeyRingCollection]] =
+  def genPGPSecretKeyRingCollection[F[_] : Sync : ContextShift : Clock](blocker: Blocker,
+                                                                        passphrase: Array[Char]): Gen[Resource[F, PGPSecretKeyRingCollection]] =
     (arbitrary[Resource[F, PGPKeyPair]], arbitrary[String]).mapN { (keyPairR, keyRingId) =>
       for {
         kp <- keyPairR
-        generator <- Resource.eval(pgpKeyRingGenerator[F](keyRingId, kp, passphrase))
+        generator <- Resource.eval(pgpKeyRingGenerator[F](blocker)(keyRingId, kp, passphrase))
       } yield new PGPSecretKeyRingCollection(List(generator.generateSecretKeyRing()).asJava)
     }
 
@@ -151,12 +152,14 @@ class CryptoAlgSpec4
       key <- Stream.fromIterator[F](ring.iterator().asScala)
     } yield key
 
-  it should "round trip the plaintext using a key ring collection" in { crypto =>
+  it should "round trip the plaintext using a key ring collection" in { tuple =>
+    val (blocker, crypto) = tuple
+
     forAll(MinSuccessful(1)) { (passphrase: Array[Char],
                                 bytesG: Stream[Pure, Byte],
                                 encryptionChunkSize: ChunkSize,
                                 decryptionChunkSize: ChunkSize) =>
-      forAll(genPGPSecretKeyRingCollection[IO](passphrase), MinSuccessful(1)) { collectionR =>
+      forAll(genPGPSecretKeyRingCollection[IO](blocker, passphrase), MinSuccessful(1)) { collectionR =>
         val materializedBytes: List[Byte] = bytesG.compile.toList
 
         for {
@@ -179,17 +182,19 @@ class CryptoAlgSpec4
 
 class CryptoAlgSpec5
   extends FixtureAsyncFlatSpec
-    with CatsResourceIO[CryptoAlg[IO]]
+    with CatsResourceIO[(Blocker, CryptoAlg[IO])]
     with CryptoArbitraries
     with Fs2PgpSpec {
 
-  override def resource: Resource[IO, CryptoAlg[IO]] = Blocker[IO].flatMap(CryptoAlg[IO](_, removeOnClose = false))
+  override def resource: Resource[IO, (Blocker, CryptoAlg[IO])] = Blocker[IO].mproduct(CryptoAlg[IO](_))
 
   private implicit val noOpLogger: Logger[IO] = NoOpLogger[IO]()
 
   behavior of "CryptoAlg"
 
-  it should "round trip the plaintext using a key ring" in { crypto =>
+  it should "round trip the plaintext using a key ring" in { tuple =>
+    val (blocker, crypto) = tuple
+
     forAll(MinSuccessful(1)) { (keyPairR: Resource[IO, PGPKeyPair],
                                 bytesG: Stream[Pure, Byte],
                                 encryptionChunkSize: ChunkSize,
@@ -200,7 +205,7 @@ class CryptoAlgSpec5
 
       for {
         kp <- keyPairR
-        ring <- Resource.eval(pgpKeyRingGenerator[IO](keyRingId, kp, passphrase)).map(_.generateSecretKeyRing())
+        ring <- Resource.eval(pgpKeyRingGenerator[IO](blocker)(keyRingId, kp, passphrase)).map(_.generateSecretKeyRing())
         roundTrip <- Stream.emits(materializedBytes)
           .through(crypto.encrypt(kp.getPublicKey, encryptionChunkSize))
           .through(crypto.armor(encryptionChunkSize))
@@ -240,10 +245,11 @@ trait CryptoArbitraries { self: PgpArbitraries =>
     chooseRefinedNum[Refined, Int, Positive](1024, 4096).map(tagChunkSize)
   }
 
-  def pgpKeyRingGenerator[F[_] : Sync](keyRingId: String,
-                                       keyPair: PGPKeyPair,
-                                       passphrase: Array[Char]): F[PGPKeyRingGenerator] =
-    Sync[F].delay {
+  def pgpKeyRingGenerator[F[_] : Sync : ContextShift](blocker: Blocker)
+                                                     (keyRingId: String,
+                                                      keyPair: PGPKeyPair,
+                                                      passphrase: Array[Char]): F[PGPKeyRingGenerator] =
+    blocker.delay {
       val pgpContentSignerBuilder = new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA1)
       val dc = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1)
       val keyEncryptor = new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.CAST5).build(passphrase)

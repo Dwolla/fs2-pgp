@@ -84,7 +84,7 @@ class PGPKeyAlgSpec
       keyR.evalMap { key =>
         val armored: IO[String] =
           (for {
-            crypto <- Stream.resource(CryptoAlg[IO](blocker, removeOnClose = false))
+            crypto <- Stream.resource(CryptoAlg[IO](blocker))
             armored <- Stream.emits(key.getEncoded)
               .through(crypto.armor())
               .through(text.utf8Decode)
@@ -108,7 +108,7 @@ class PGPKeyAlgSpec
       kp.evalMap { keyPair =>
         val armoredKey =
           (for {
-            crypto <- CryptoAlg[IO](blocker, removeOnClose = false)
+            crypto <- CryptoAlg[IO](blocker)
             secretKey <- Resource.eval(blocker.delay {
               val sha1Calc: PGPDigestCalculator = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1)
               new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, "identity", sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA256), new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256, sha1Calc).setProvider("BC").build(passphrase))
@@ -139,7 +139,7 @@ class PGPKeyAlgSpec
       kp.evalMap { keyPair =>
         val armoredKey =
           (for {
-            crypto <- CryptoAlg[IO](blocker, removeOnClose = false)
+            crypto <- CryptoAlg[IO](blocker)
             secretKey <- Resource.eval(blocker.delay {
               val sha1Calc: PGPDigestCalculator = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1)
               new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, "identity", sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA256), new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256, sha1Calc).setProvider("BC").build(passphrase))

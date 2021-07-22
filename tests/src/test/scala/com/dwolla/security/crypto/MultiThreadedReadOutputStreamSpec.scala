@@ -28,7 +28,7 @@ class MultiThreadedReadOutputStreamSpec
         blocker <- Blocker.fromExecutorService[IO](IO {
           new ThreadPoolExecutor(0, Int.MaxValue, 0L, SECONDS, new SynchronousQueue[Runnable])
         })
-        crypto <- CryptoAlg[IO](blocker, removeOnClose = false)
+        crypto <- CryptoAlg[IO](blocker)
         keyPair <- keyPairR
         roundTrip <- bytes
           .through(crypto.encrypt(keyPair.getPublicKey, encryptionChunkSize))
