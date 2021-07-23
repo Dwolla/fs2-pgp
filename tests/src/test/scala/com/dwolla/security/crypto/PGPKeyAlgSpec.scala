@@ -23,7 +23,6 @@ class PGPKeyAlgSpec
     with Fs2PgpSpec
     with DateMatchers {
   private implicit val L: Logger[IO] = NoOpLogger[IO]()
-  private implicit def arbKeyPair[F[_] : Sync : ContextShift : Clock]: Arbitrary[Resource[F, PGPKeyPair]] = arbStrongKeyPair[F]
 
   override def resource: Resource[IO, Blocker] = Blocker[IO]
 
@@ -80,6 +79,8 @@ class PGPKeyAlgSpec
   }
 
   it should "load an arbitrary armored PGP public key" in { blocker =>
+    implicit val arbKeyPair: Arbitrary[Resource[IO, PGPKeyPair]] = arbWeakKeyPair(blocker)
+
     forAll { (keyR: Resource[IO, PGPPublicKey]) =>
       keyR.evalMap { key =>
         val armored: IO[String] =
@@ -104,7 +105,7 @@ class PGPKeyAlgSpec
   }
 
   it should "load an arbitrary armored PGP private key" in { blocker =>
-    forAll(arbKeyPair[IO].arbitrary, arbitrary[Array[Char]]) { (kp, passphrase) =>
+    forAll(arbWeakKeyPair(blocker).arbitrary, arbitrary[Array[Char]]) { (kp, passphrase) =>
       kp.evalMap { keyPair =>
         val armoredKey =
           (for {
@@ -135,7 +136,7 @@ class PGPKeyAlgSpec
   }
 
   it should "load an arbitrary armored PGP private key as a secret key collection" in { blocker =>
-    forAll(arbKeyPair[IO].arbitrary, arbitrary[Array[Char]]) { (kp, passphrase) =>
+    forAll(arbWeakKeyPair(blocker).arbitrary, arbitrary[Array[Char]]) { (kp, passphrase) =>
       kp.evalMap { keyPair =>
         val armoredKey =
           (for {
