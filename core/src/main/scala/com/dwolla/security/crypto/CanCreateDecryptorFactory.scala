@@ -8,7 +8,7 @@ import org.bouncycastle.openpgp.operator.bc.{BcPBESecretKeyDecryptorBuilder, BcP
 import org.bouncycastle.openpgp.{PGPPrivateKey, PGPSecretKey, PGPSecretKeyRing, PGPSecretKeyRingCollection}
 
 trait CanCreateDecryptorFactory[F[_], A] {
-  def publicKeyDataDecryptorFactory(input: A, keyId: Long, passphrase: Array[Char]): F[PublicKeyDataDecryptorFactory]
+  def publicKeyDataDecryptorFactory(input: A, keyId: Long): F[PublicKeyDataDecryptorFactory]
 }
 
 class BlockingCanCreateDecryptorFactories[F[_] : Sync : ContextShift](blocker: Blocker) {
@@ -26,16 +26,16 @@ class BlockingCanCreateDecryptorFactories[F[_] : Sync : ContextShift](blocker: B
       }
       .getOrElseF(KeyRingMissingKeyException(keyId).raiseError[F, PublicKeyDataDecryptorFactory])
 
-  implicit def PGPSecretKeyRingCollectionInstance: CanCreateDecryptorFactory[F, PGPSecretKeyRingCollection] =
-    (input: PGPSecretKeyRingCollection, keyId: Long, passphrase: Array[Char]) =>
-      secretKeyInstance(Option(input.getSecretKey(keyId)), keyId, passphrase)
+  implicit def PGPSecretKeyRingCollectionInstance: CanCreateDecryptorFactory[F, (PGPSecretKeyRingCollection, Array[Char])] =
+    (input: (PGPSecretKeyRingCollection, Array[Char]), keyId: Long) =>
+      secretKeyInstance(Option(input._1.getSecretKey(keyId)), keyId, input._2)
 
-  implicit def PGPSecretKeyRingInstance: CanCreateDecryptorFactory[F, PGPSecretKeyRing] =
-    (input: PGPSecretKeyRing, keyId: Long, passphrase: Array[Char]) =>
-      secretKeyInstance(Option(input.getSecretKey(keyId)), keyId, passphrase)
+  implicit def PGPSecretKeyRingInstance: CanCreateDecryptorFactory[F, (PGPSecretKeyRing, Array[Char])] =
+    (input: (PGPSecretKeyRing, Array[Char]), keyId: Long) =>
+      secretKeyInstance(Option(input._1.getSecretKey(keyId)), keyId, input._2)
 
   implicit def PGPPrivateKeyInstance: CanCreateDecryptorFactory[F, PGPPrivateKey] =
-    (input: PGPPrivateKey, keyId, _) =>
+    (input: PGPPrivateKey, keyId) =>
       if (input.getKeyID != keyId) KeyMismatchException(input.getKeyID, keyId).raiseError[F, PublicKeyDataDecryptorFactory]
       else blocker.delay(new BcPublicKeyDataDecryptorFactory(input))
 }

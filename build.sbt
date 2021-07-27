@@ -29,7 +29,6 @@ inThisBuild(List(
       url("https://dwolla.com")
     )
   ),
-//  githubWorkflowUseSbtThinClient := false,
   githubWorkflowTargetTags ++= Seq("v*"),
   githubWorkflowJavaVersions := Seq("adopt@1.8", "adopt@1.11"),
   githubWorkflowPublishTargetBranches :=

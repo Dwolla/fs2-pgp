@@ -148,11 +148,10 @@ object CryptoAlg {
         }
 
       private def pgpInputStreamToByteStream[A : CanCreateDecryptorFactory[F, *]](keylike: A,
-                                                                                  passphrase: Array[Char],
                                                                                   chunkSize: ChunkSize): InputStream => Stream[F, Byte] = {
         def pgpCompressedDataToBytes(pcd: PGPCompressedData): Stream[F, Byte] =
           Logger[Stream[F, *]].trace("Found compressed data") >>
-            pgpInputStreamToByteStream(keylike, passphrase, chunkSize).apply(pcd.getDataStream)
+            pgpInputStreamToByteStream(keylike, chunkSize).apply(pcd.getDataStream)
 
         /*
          * Literal data is not to be further processed, so its contents
@@ -168,13 +167,13 @@ object CryptoAlg {
               .evalMap {
                 case pbe: PGPPublicKeyEncryptedData =>
                   CanCreateDecryptorFactory[F, A]
-                    .publicKeyDataDecryptorFactory(keylike, pbe.getKeyID, passphrase)
+                    .publicKeyDataDecryptorFactory(keylike, pbe.getKeyID)
                     .flatMap(factory => blocker.delay(pbe.getDataStream(factory)))
                 case other =>
                   Logger[F].error(EncryptionTypeError)(s"found wrong type of encrypted data: $other") >>
                     EncryptionTypeError.raiseError[F, InputStream]
               }
-              .flatMap(pgpInputStreamToByteStream(keylike, passphrase, chunkSize))
+              .flatMap(pgpInputStreamToByteStream(keylike, chunkSize))
         }
 
         def ignore(s: String): Stream[F, Byte] =
@@ -213,17 +212,17 @@ object CryptoAlg {
                            passphrase: Array[Char],
                            chunkSize: ChunkSize): Pipe[F, Byte, Byte] =
         _.through(pipeToDecoderStream)
-          .flatMap(pgpInputStreamToByteStream(keyring, passphrase, chunkSize))
+          .flatMap(pgpInputStreamToByteStream((keyring, passphrase), chunkSize))
 
       override def decrypt(keyring: PGPSecretKeyRing,
                            passphrase: Array[Char],
                            chunkSize: ChunkSize): Pipe[F, Byte, Byte] =
         _.through(pipeToDecoderStream)
-          .flatMap(pgpInputStreamToByteStream(keyring, passphrase, chunkSize))
+          .flatMap(pgpInputStreamToByteStream((keyring, passphrase), chunkSize))
 
       override def decrypt(key: PGPPrivateKey, chunkSize: ChunkSize): Pipe[F, Byte, Byte] =
         _.through(pipeToDecoderStream)
-          .flatMap(pgpInputStreamToByteStream(key, Array.empty, chunkSize))
+          .flatMap(pgpInputStreamToByteStream(key, chunkSize))
 
       private def writeToArmorer(armorer: OutputStream): Pipe[F, Byte, Unit] =
         _.through(writeOutputStream(armorer.pure[F], blocker, closeStreamsAfterUse))
