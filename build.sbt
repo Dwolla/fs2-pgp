@@ -11,6 +11,8 @@ lazy val V = new {
   val refined = "0.9.20"
   val shapeless = "2.3.7"
   val log4cats = "1.3.1"
+  val catsScalacheck = "0.3.0"
+  val scalaCollectionCompat = "2.2.0"
 }
 
 inThisBuild(List(
@@ -77,7 +79,7 @@ lazy val `fs2-pgp`: Project = (project in file("core"))
         "co.fs2" %% "fs2-core" % V.fs2,
         "co.fs2" %% "fs2-io" % V.fs2,
         "com.chuusai" %% "shapeless" % V.shapeless,
-        "org.scala-lang.modules" %% "scala-collection-compat" % "2.2.0",
+        "org.scala-lang.modules" %% "scala-collection-compat" % V.scalaCollectionCompat,
         "org.typelevel" %% "log4cats-core" % V.log4cats,
         "eu.timepit" %% "refined" % V.refined,
       )
@@ -93,6 +95,7 @@ lazy val tests = (project in file("tests"))
         "org.scalatest" %% "scalatest" % V.scalaTest % Test,
         "com.codecommit" %% "cats-effect-testing-scalatest-scalacheck" % V.catsEffectTestingScalatestScalacheck % Test,
         "eu.timepit" %% "refined-scalacheck" % V.refined % Test,
+        "io.chrisdavenport" %% "cats-scalacheck" % V.catsScalacheck % Test,
       )
     },
     publish / skip := true,
@@ -117,8 +120,13 @@ lazy val `pgp-testkit`: Project = (project in file("testkit"))
         "org.typelevel" %% "cats-effect" % V.catsEffect,
         "eu.timepit" %% "refined" % V.refined,
         "com.chuusai" %% "shapeless" % V.shapeless,
+        "eu.timepit" %% "refined-scalacheck" % V.refined,
+        "io.chrisdavenport" %% "cats-scalacheck" % V.catsScalacheck,
+        "co.fs2" %% "fs2-core" % V.fs2,
+        "org.scala-lang.modules" %% "scala-collection-compat" % V.scalaCollectionCompat
       )
     },
+    unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),
   ) ++ commonSettings: _*)
   .dependsOn(`fs2-pgp`)
 

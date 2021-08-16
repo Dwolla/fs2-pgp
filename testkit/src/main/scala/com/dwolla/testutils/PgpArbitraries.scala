@@ -22,28 +22,31 @@ trait PgpArbitraries {
   type KeySizePred = GreaterEqual[W.`384`.T]
   type KeySize = Int Refined KeySizePred
 
-  def arbStrongKeyPair[F[_] : Sync : ContextShift : Clock]: Arbitrary[Resource[F, PGPKeyPair]] = Arbitrary {
+  def arbStrongKeyPair[F[_] : Sync : ContextShift : Clock](blocker: Blocker): Arbitrary[Resource[F, PGPKeyPair]] = Arbitrary {
     for {
       keySize <- Gen.oneOf[KeySize](2048, 4096)
-      keyPair <- arbKeyPair[F](keySize).arbitrary
+      keyPair <- arbKeyPair[F](blocker, keySize).arbitrary
     } yield keyPair
   }
 
-  def arbWeakKeyPair[F[_] : Sync : ContextShift : Clock]: Arbitrary[Resource[F, PGPKeyPair]] =
-    arbKeyPair[F](384)
+  def arbWeakKeyPair[F[_] : Sync : ContextShift : Clock](blocker: Blocker): Arbitrary[Resource[F, PGPKeyPair]] =
+    arbKeyPair[F](blocker, 512)
 
-  def arbKeyPair[F[_] : Sync : ContextShift : Clock](keySize: KeySize): Arbitrary[Resource[F, PGPKeyPair]] = Arbitrary {
-    Blocker[F]
-      .flatMap(BouncyCastleResource[F](_, removeOnClose = false))
+  def arbKeyPair[F[_] : Sync : ContextShift : Clock](blocker: Blocker,
+                                                     keySize: KeySize): Arbitrary[Resource[F, PGPKeyPair]] = Arbitrary {
+    BouncyCastleResource[F](blocker)
       .evalMap { _ =>
         for {
+          generator <- blocker.delay {
+            val instance = KeyPairGenerator.getInstance("RSA", "BC")
+            instance.initialize(keySize.value)
+            instance
+          }
           pair <- Sync[F].delay {
-            val generator = KeyPairGenerator.getInstance("RSA", "BC")
-            generator.initialize(keySize.value)
             generator.generateKeyPair()
           }
           now <- Clock[F].realTime(MILLISECONDS).map(new Date(_))
-          pgpPair <- Sync[F].delay {
+          pgpPair <- MonadThrow[F].catchNonFatal {
             new JcaPGPKeyPair(PublicKeyAlgorithmTags.RSA_GENERAL, pair, now)
           }
         } yield pgpPair

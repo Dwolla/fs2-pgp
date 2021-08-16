@@ -1,37 +1,52 @@
 package com.dwolla.security.crypto
 
 import java.security.Security
-
 import cats.effect._
 import cats.syntax.all._
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 
+import java.util.concurrent.atomic.AtomicInteger
+
 sealed trait BouncyCastleResource
 object BouncyCastleResource {
-  def apply[F[_] : Sync : ContextShift](blocker: Blocker,
-                                        removeOnClose: Boolean = true): Resource[F, BouncyCastleResource] = {
-    def registerBouncyCastle: F[BouncyCastleRegistrationToken] =
+  private val timesBouncyCastleHasBeenRegistered: AtomicInteger = new AtomicInteger(0)
+
+  private def register(provider: BouncyCastleProvider): Unit =
+    synchronized {
+      val previousCount = timesBouncyCastleHasBeenRegistered.getAndIncrement()
+      val position = Security.addProvider(provider)
+
+      /**
+       * If BouncyCastle was already registered (as indicated by the returned
+       * position being -1) but we didn't register it (as indicated
+       * by the previous count being 0, then increment the counter so we
+       * don't end up removing it when all these BouncyCastleResources
+       * go out of scope.
+       */
+      if (position == -1 && previousCount == 0)
+        timesBouncyCastleHasBeenRegistered.incrementAndGet()
+
+      ()
+    }
+
+  private def deregister(name: String): Unit =
+    synchronized {
+      val remaining = timesBouncyCastleHasBeenRegistered.decrementAndGet()
+
+      if (0 == remaining)
+        Security.removeProvider(name)
+    }
+
+  def apply[F[_] : Sync : ContextShift](blocker: Blocker): Resource[F, BouncyCastleResource] = {
+    def registerBouncyCastle: F[String] =
       for {
         provider <- blocker.delay(new BouncyCastleProvider)
-        pos <- blocker.delay(Security.addProvider(provider))
-      } yield BouncyCastleRegistrationToken(pos, provider.getName)
+        _ <- blocker.delay(register(provider))
+      } yield provider.getName
 
-    def removeBouncyCastle(token: BouncyCastleRegistrationToken): F[Unit] =
-      token match {
-        case Registered(name) if removeOnClose => blocker.delay(Security.removeProvider(name))
-        case _ => ().pure[F]
-      }
+    def removeBouncyCastle(name: String): F[Unit] =
+      blocker.delay(deregister(name))
 
     Resource.make(registerBouncyCastle)(removeBouncyCastle).as(new BouncyCastleResource {})
   }
 }
-
-private[crypto] sealed trait BouncyCastleRegistrationToken
-private[crypto] object BouncyCastleRegistrationToken {
-  def apply(position: Int, name: String): BouncyCastleRegistrationToken =
-    if (-1 == position) AlreadyRegistered
-    else Registered(name)
-}
-
-private[crypto] case class Registered(name: String) extends BouncyCastleRegistrationToken
-private[crypto] case object AlreadyRegistered extends BouncyCastleRegistrationToken
