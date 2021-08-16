@@ -6,13 +6,15 @@ lazy val V = new {
   val catsEffect = "2.5.4"
   val fs2 = "2.5.10"
   val bouncyCastle = "1.69"
-  val scalaTest = "3.2.10"
-  val catsEffectTestingScalatestScalacheck = "0.5.4"
   val refined = "0.9.27"
   val shapeless = "2.3.7"
   val log4cats = "1.3.1"
-  val catsScalacheck = "0.3.1"
+  val catsScalacheck = "0.3.0"
   val scalaCollectionCompat = "2.5.0"
+  val munit = "0.7.28"
+  val scalacheckEffect = "1.0.2"
+  val munitCatsEffect = "1.0.5"
+  val expecty = "0.15.4"
 }
 
 inThisBuild(List(
@@ -92,10 +94,15 @@ lazy val tests = (project in file("tests"))
     description := "Tests broken out into a separate project to break a circular dependency",
     libraryDependencies ++= {
       Seq(
-        "org.scalatest" %% "scalatest" % V.scalaTest % Test,
-        "com.codecommit" %% "cats-effect-testing-scalatest-scalacheck" % V.catsEffectTestingScalatestScalacheck % Test,
+        "org.scalameta" %% "munit" % V.munit % Test,
+        "org.typelevel" %% "scalacheck-effect" % V.scalacheckEffect % Test,
+        "org.typelevel" %% "scalacheck-effect-munit" % V.scalacheckEffect % Test,
+        "org.typelevel" %% "munit-cats-effect-2" % V.munitCatsEffect % Test,
         "eu.timepit" %% "refined-scalacheck" % V.refined % Test,
         "io.chrisdavenport" %% "cats-scalacheck" % V.catsScalacheck % Test,
+        "org.typelevel" %% "log4cats-noop" % V.log4cats % Test,
+        "dev.holt" %% "java-time-literals" % "1.0.0" % Test,
+        "com.eed3si9n.expecty" %% "expecty" % V.expecty % Test,
       )
     },
     publish / skip := true,
@@ -109,13 +116,7 @@ lazy val `pgp-testkit`: Project = (project in file("testkit"))
       Seq(
         "org.bouncycastle" % "bcpg-jdk15on" % V.bouncyCastle,
         "org.bouncycastle" % "bcprov-jdk15on" % V.bouncyCastle % Runtime,
-        "com.codecommit" %% "cats-effect-testing-scalatest-scalacheck" % V.catsEffectTestingScalatestScalacheck,
-        "org.typelevel" %% "log4cats-core" % V.log4cats,
         "org.scalacheck" %% "scalacheck" % "1.15.4",
-        "org.scalactic" %% "scalactic" % "3.2.10",
-        "org.scalatest" %% "scalatest-core" % "3.2.10",
-        "org.scalatest" %% "scalatest-matchers-core" % "3.2.10",
-        "org.scalatestplus" %% "scalacheck-1-15" % "3.2.10.0",
         "org.typelevel" %% "cats-core" % V.cats,
         "org.typelevel" %% "cats-effect" % V.catsEffect,
         "eu.timepit" %% "refined" % V.refined,

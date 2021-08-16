@@ -1,34 +1,37 @@
 package com.dwolla.security.crypto
 
 import cats.effect._
-import cats.effect.testing.scalatest._
 import cats.syntax.all._
 import com.dwolla.testutils._
-import eu.timepit.refined.auto._
-import org.typelevel.log4cats.Logger
+import dev.holt.javatime.literals._
 import fs2._
 import fs2.io.readOutputStream
+import munit.{CatsEffectSuite, ScalaCheckEffectSuite}
 import org.bouncycastle.bcpg.{HashAlgorithmTags, PublicKeyAlgorithmTags, SymmetricKeyAlgorithmTags}
 import org.bouncycastle.openpgp._
 import org.bouncycastle.openpgp.operator.PGPDigestCalculator
 import org.bouncycastle.openpgp.operator.jcajce.{JcaPGPContentSignerBuilder, JcaPGPDigestCalculatorProviderBuilder, JcePBESecretKeyEncryptorBuilder}
 import org.scalacheck.Arbitrary
 import org.scalacheck.Arbitrary.arbitrary
-import org.scalatest.flatspec._
+import org.scalacheck.effect.PropF.forAllF
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.noop.NoOpLogger
+import com.eed3si9n.expecty.Expecty.{ assert => Assert }
+
 import scala.jdk.CollectionConverters._
 
 class PGPKeyAlgSpec
-  extends FixtureAsyncFlatSpec
-    with CatsResourceIO[Blocker]
-    with Fs2PgpSpec
-    with DateMatchers {
-  private implicit val L: Logger[IO] = NoOpLogger[IO]()
+  extends CatsEffectSuite
+    with ScalaCheckEffectSuite
+    with PgpArbitraries
+    with CryptoArbitraries {
+  private implicit val L: Logger[IO] = NoOpLogger[IO]
 
-  override def resource: Resource[IO, Blocker] = Blocker[IO]
+  private val resource = ResourceSuiteLocalFixture("Blocker[IO]", Blocker[IO])
+  override def munitFixtures = List(resource)
 
-  behavior of "PGPKeyAlg"
-
-  it should "load a PGPPublicKey from armored public key" in { blocker =>
+  test("PGPKeyAlg should load a PGPPublicKey from armored public key") {
+    val blocker = resource()
     val key =
       """-----BEGIN PGP PUBLIC KEY BLOCK-----
         |Version: GnuPG v1
@@ -71,18 +74,19 @@ class PGPKeyAlgSpec
        * pub   rsa2048/363987CD6A40AA57 2015-05-29 [SC]
        * ^^^^^^^^^^^^^^^^
        */
-      publicKey.getKeyID should be(0x363987CD6A40AA57L)
-      publicKey.getAlgorithm should be(PublicKeyAlgorithmTags.RSA_GENERAL)
-      publicKey.getBitStrength should be(2048)
-      publicKey.getCreationTime should beTheSameInstantAs("2015-05-29T20:19:50Z")
+      assertEquals(publicKey.getKeyID, 0x363987CD6A40AA57L)
+      assertEquals(publicKey.getAlgorithm, PublicKeyAlgorithmTags.RSA_GENERAL)
+      assertEquals(publicKey.getBitStrength, 2048)
+      assertEquals(publicKey.getCreationTime.toInstant, instant"2015-05-29T20:19:50Z")
     }
   }
 
-  it should "load an arbitrary armored PGP public key" in { blocker =>
+  test("PGPKeyAlg should load an arbitrary armored PGP public key") {
+    val blocker = resource()
     implicit val arbKeyPair: Arbitrary[Resource[IO, PGPKeyPair]] = arbWeakKeyPair(blocker)
 
-    forAll { (keyR: Resource[IO, PGPPublicKey]) =>
-      keyR.evalMap { key =>
+    forAllF { (keyR: Resource[IO, PGPPublicKey]) =>
+      val testResource = keyR.evalMap { key =>
         val armored: IO[String] =
           (for {
             crypto <- Stream.resource(CryptoAlg[IO](blocker))
@@ -94,29 +98,33 @@ class PGPKeyAlgSpec
         for {
           armoredKey <- armored
           output <- PGPKeyAlg[IO](blocker).readPublicKey(armoredKey)
-        } yield {
-          output.getKeyID should be(key.getKeyID)
-          output.getAlgorithm should be(key.getAlgorithm)
-          output.getBitStrength should be(key.getBitStrength)
-          output.getCreationTime should be(key.getCreationTime)
-        }
+        } yield (key, output)
       }
+
+      testResource.use { case (key, output) => IO {
+        assertEquals(output.getKeyID, key.getKeyID)
+        assertEquals(output.getAlgorithm, key.getAlgorithm)
+        assertEquals(output.getBitStrength, key.getBitStrength)
+        assertEquals(output.getCreationTime, key.getCreationTime)
+      }}
     }
   }
 
-  it should "load an arbitrary armored PGP private key" in { blocker =>
-    forAll(arbWeakKeyPair(blocker).arbitrary, arbitrary[Array[Char]]) { (kp, passphrase) =>
-      kp.evalMap { keyPair =>
+  test("PGPKeyAlg should load an arbitrary armored PGP private key") {
+    val blocker = resource()
+
+    forAllF(arbWeakKeyPair[IO](blocker).arbitrary, arbitrary[Array[Char]]) { (kp, passphrase) =>
+      val testResource = kp.evalMap { keyPair =>
         val armoredKey =
           (for {
             crypto <- CryptoAlg[IO](blocker)
-            secretKey <- Resource.eval(blocker.delay {
+            secretKey <- Resource.eval(blocker.delay[IO, PGPSecretKey] {
               val sha1Calc: PGPDigestCalculator = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1)
               new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, "identity", sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA256), new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256, sha1Calc).setProvider("BC").build(passphrase))
             })
             armoredKey <-
               readOutputStream(blocker, 4096) { os =>
-                blocker.delay(secretKey.encode(os))
+                blocker.delay[IO, Unit](secretKey.encode(os))
               }
                 .through(crypto.armor())
                 .through(text.utf8Decode)
@@ -128,26 +136,30 @@ class PGPKeyAlgSpec
         for {
           ak <- armoredKey
           output <- PGPKeyAlg[IO](blocker).readPrivateKey(ak, passphrase)
-        } yield {
-          output.getKeyID should be(keyPair.getPrivateKey.getKeyID)
-        }
+        } yield (keyPair, output)
       }
+
+      testResource.use { case (keyPair, output) => IO {
+        assertEquals(output.getKeyID, keyPair.getPrivateKey.getKeyID)
+      }}
     }
   }
 
-  it should "load an arbitrary armored PGP private key as a secret key collection" in { blocker =>
-    forAll(arbWeakKeyPair(blocker).arbitrary, arbitrary[Array[Char]]) { (kp, passphrase) =>
-      kp.evalMap { keyPair =>
+  test("PGPKeyAlg should load an arbitrary armored PGP private key as a secret key collection") {
+    val blocker = resource()
+
+    forAllF(arbWeakKeyPair[IO](blocker).arbitrary, arbitrary[Array[Char]]) { (kp, passphrase) =>
+      val testResource = kp.evalMap { keyPair =>
         val armoredKey =
           (for {
             crypto <- CryptoAlg[IO](blocker)
-            secretKey <- Resource.eval(blocker.delay {
+            secretKey <- Resource.eval(blocker.delay[IO, PGPSecretKey] {
               val sha1Calc: PGPDigestCalculator = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1)
               new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, "identity", sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA256), new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256, sha1Calc).setProvider("BC").build(passphrase))
             })
             armoredKey <-
               readOutputStream(blocker, 4096) { os =>
-                blocker.delay(secretKey.encode(os))
+                blocker.delay[IO, Unit](secretKey.encode(os))
               }
                 .through(crypto.armor())
                 .through(text.utf8Decode)
@@ -159,15 +171,19 @@ class PGPKeyAlgSpec
         for {
           ak <- armoredKey
           output <- PGPKeyAlg[IO](blocker).readSecretKeyCollection(ak)
-        } yield {
-          output.contains(keyPair.getPrivateKey.getKeyID) should be(true)
-          output.size() should be(1)
-        }
+        } yield (keyPair, output)
       }
+
+      testResource.use { case (keyPair, output) => IO {
+        assertEquals(output.contains(keyPair.getPrivateKey.getKeyID), true)
+        assertEquals(output.size(), 1)
+      }}
     }
   }
 
-  it should "load an exported secret key into a key ring" in { blocker =>
+  test("PGPKeyAlg should load an exported secret key into a key ring") {
+    val blocker = resource()
+
     for {
       output <- PGPKeyAlg[IO](blocker).readSecretKeyCollection(TestKey())
       count <- Stream.fromIterator[IO](output.iterator().asScala)
@@ -176,25 +192,28 @@ class PGPKeyAlgSpec
         .compile
         .foldMonoid
     } yield {
-      count should be(2)
-      output.contains(5958252092039458491L) should be(true)
-      output.contains(6117159660097923297L) should be(true)
+      assertEquals(count, 2)
+      assertEquals(output.contains(5958252092039458491L), true)
+      assertEquals(output.contains(6117159660097923297L), true)
     }
   }
 
-  it should "infer the second Stream compiler type cleanly for IO" in { blocker =>
+  test("PGPKeyAlg should infer the second Stream compiler type cleanly for IO") {
+    val blocker = resource()
+
     val pgpKeyAlg = PGPKeyAlg[IO](blocker)
 
     val output = pgpKeyAlg.readPublicKey("")
-    output shouldBe an [IO[_]]
+    Assert(output.isInstanceOf[IO[PGPPublicKey]])
   }
 
-  it should "infer the second Stream compiler type cleanly for Resource" in { blocker =>
+  test("PGPKeyAlg should infer the second Stream compiler type cleanly for Resource") {
+    val blocker = resource()
+
     val pgpKeyAlg = PGPKeyAlg[Resource[IO, *]](blocker)
 
     val output = pgpKeyAlg.readPublicKey("")
-    output shouldBe a [Resource[*[_], _]]
-    output.use(_ => IO.unit) shouldBe an [IO[_]]
+    Assert(output.isInstanceOf[Resource[IO, PGPPublicKey]])
   }
 }
 

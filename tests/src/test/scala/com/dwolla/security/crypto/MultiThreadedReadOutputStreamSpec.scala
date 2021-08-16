@@ -1,39 +1,44 @@
 package com.dwolla.security.crypto
 
 import cats.effect._
-import cats.effect.testing.scalatest.CatsResourceIO
 import com.dwolla.testutils._
 import fs2._
+import munit._
 import org.bouncycastle.openpgp.PGPKeyPair
-import org.scalacheck.Arbitrary
-import org.scalatest.flatspec.FixtureAsyncFlatSpec
+import org.scalacheck.{Arbitrary, Test}
+import org.scalacheck.effect.PropF.forAllF
 import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.noop.NoOpLogger
 
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.{SynchronousQueue, ThreadPoolExecutor}
 
 class MultiThreadedReadOutputStreamSpec
-  extends FixtureAsyncFlatSpec
-    with CatsResourceIO[Blocker]
-    with CryptoArbitraries
-    with Fs2PgpSpec {
+  extends CatsEffectSuite
+    with ScalaCheckEffectSuite
+    with PgpArbitraries
+    with CryptoArbitraries {
 
-  override def resource: Resource[IO, Blocker] = Blocker.fromExecutorService[IO](IO {
+  private val resource = ResourceSuiteLocalFixture("Blocker[IO]", Blocker.fromExecutorService[IO](IO {
     new ThreadPoolExecutor(0, Int.MaxValue, 0L, SECONDS, new SynchronousQueue[Runnable])
-  })
+  }))
+  override def munitFixtures = List(resource)
 
-  private implicit val noOpLogger: Logger[IO] = NoOpLogger[IO]()
+  private implicit val noOpLogger: Logger[IO] = NoOpLogger[IO]
 
-  behavior of "CryptoAlg"
+  override protected def scalaCheckTestParameters: Test.Parameters =
+    Test.Parameters.default
+      .withMinSuccessfulTests(1)
 
-  it should "round trip the plaintext with a pathological ThreadPool" in { blocker =>
+  test("CryptoAlg should round trip the plaintext with a pathological ThreadPool") {
+    val blocker = resource()
     implicit val arbKeyPair: Arbitrary[Resource[IO, PGPKeyPair]] = arbWeakKeyPair(blocker)
 
-    forAll(MinSuccessful(1)) { (keyPairR: Resource[IO, PGPKeyPair],
-                                bytes: Stream[Pure, Byte],
-                                encryptionChunkSize: ChunkSize,
-                                decryptionChunkSize: ChunkSize) =>
-      for {
+    forAllF { (keyPairR: Resource[IO, PGPKeyPair],
+               bytes: Stream[Pure, Byte],
+               encryptionChunkSize: ChunkSize,
+               decryptionChunkSize: ChunkSize) =>
+      val testResource = for {
         crypto <- CryptoAlg[IO](blocker)
         keyPair <- keyPairR
         roundTrip <- bytes
@@ -42,9 +47,11 @@ class MultiThreadedReadOutputStreamSpec
           .compile
           .resource
           .toList
-      } yield {
-        roundTrip should be(bytes.toList)
-      }
+      } yield (roundTrip, bytes.toList)
+
+      testResource.use { case (roundTrip, bytes) => IO {
+        assertEquals(roundTrip, bytes)
+      }}
     }
   }
 }
