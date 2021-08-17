@@ -43,23 +43,6 @@ inThisBuild(List(
       url("https://dwolla.com")
     )
   ),
-  githubWorkflowTargetTags ++= Seq("v*"),
-  githubWorkflowJavaVersions := Seq("adopt@1.8", "adopt@1.11"),
-  githubWorkflowPublishTargetBranches :=
-    Seq(RefPredicate.StartsWith(Ref.Tag("v"))),
-  githubWorkflowBuild := Seq(WorkflowStep.Sbt(List("undeclaredCompileDependenciesTest", "unusedCompileDependenciesTest", "test"), name = Some("Build and test project"))),
-  githubWorkflowPublish := Seq(WorkflowStep.Sbt(List("ci-release"))),
-  githubWorkflowPublish := Seq(
-    WorkflowStep.Sbt(
-      List("ci-release"),
-      env = Map(
-        "PGP_PASSPHRASE" -> "${{ secrets.PGP_PASSPHRASE }}",
-        "PGP_SECRET" -> "${{ secrets.PGP_SECRET }}",
-        "SONATYPE_PASSWORD" -> "${{ secrets.SONATYPE_PASSWORD }}",
-        "SONATYPE_USERNAME" -> "${{ secrets.SONATYPE_USERNAME }}"
-      )
-    )
-  ),
 ))
 
 lazy val commonSettings = Seq(
