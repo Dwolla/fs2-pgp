@@ -1,5 +1,6 @@
 package com.dwolla.security
 
+import eu.timepit.refined.api.RefType
 import eu.timepit.refined.types.all._
 import eu.timepit.refined.auto._
 import eu.timepit.refined.predicates.all.Positive
@@ -15,6 +16,9 @@ package object crypto {
   def attemptTagChunkSize(pi: Int): Either[String, ChunkSize] = refineV[Positive](pi).map(tagChunkSize)
 
   val defaultChunkSize: ChunkSize = tagChunkSize(4096)
+
+  implicit def taggedAutoUnwrap[R[_, _], T, P, Tag](tp: R[T, P] @@ Tag)(implicit rt: RefType[R]): T =
+    rt.unwrap(tp)
 }
 
 package crypto {

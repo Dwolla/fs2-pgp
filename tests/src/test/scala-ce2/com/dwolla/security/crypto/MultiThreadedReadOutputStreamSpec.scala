@@ -32,7 +32,7 @@ class MultiThreadedReadOutputStreamSpec
 
   test("CryptoAlg should round trip the plaintext with a pathological ThreadPool") {
     val blocker = resource()
-    implicit val arbKeyPair: Arbitrary[Resource[IO, PGPKeyPair]] = arbWeakKeyPair(blocker)
+    implicit val arbKeyPair: Arbitrary[Resource[IO, PGPKeyPair]] = arbWeakKeyPair[IO](blocker)
 
     forAllF { (keyPairR: Resource[IO, PGPKeyPair],
                bytes: Stream[Pure, Byte],

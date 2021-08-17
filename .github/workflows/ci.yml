@@ -56,7 +56,7 @@ jobs:
         run: sbt ++${{ matrix.scala }} undeclaredCompileDependenciesTest unusedCompileDependenciesTest test
 
       - name: Compress target directories
-        run: tar cf targets.tar target core/target tests/target testkit/target project/target
+        run: tar cf targets.tar core/target/ce3-jvm-2.13 core/target/ce2-jvm-2.13 tests/target/ce3-jvm-2.12 testkit/target/ce2-jvm-2.13 core/target/ce2-jvm-2.12 tests/target/ce3-jvm-2.13 testkit/target/ce3-jvm-2.12 tests/target/ce2-jvm-2.13 target testkit/target/ce3-jvm-2.13 core/target/ce3-jvm-2.12 testkit/target/ce2-jvm-2.12 tests/target/ce2-jvm-2.12 project/target
 
       - name: Upload target directories
         uses: actions/upload-artifact@v2

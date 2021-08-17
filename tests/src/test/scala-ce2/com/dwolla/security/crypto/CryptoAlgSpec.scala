@@ -34,11 +34,10 @@ class CryptoAlgSpec
       .withMinSuccessfulTests(1)
 
   override val munitTimeout: Duration = 2.minutes
-  override def scalaCheckInitialSeed = "nhgzfFaLDNDR3UeJcKY72eP6GIqDoDZ30CNzXXFpRGL="
 
   test("CryptoAlg should round trip the plaintext using a key pair") {
     val (blocker, crypto) = resource()
-    implicit val arbKeyPair: Arbitrary[Resource[IO, PGPKeyPair]] = arbWeakKeyPair(blocker)
+    implicit val arbKeyPair: Arbitrary[Resource[IO, PGPKeyPair]] = arbWeakKeyPair[IO](blocker)
 
     forAllF { (keyPairR: Resource[IO, PGPKeyPair],
                bytesG: Stream[Pure, Byte],
@@ -46,7 +45,7 @@ class CryptoAlgSpec
                decryptionChunkSize: ChunkSize) =>
       val materializedBytes: List[Byte] = bytesG.compile.toList
       val bytes = Stream.emits(materializedBytes)
-      val testResource: Resource[IO, Unit] =
+      val testResource =
         for {
           keyPair <- keyPairR
           roundTrip <- bytes
@@ -56,11 +55,11 @@ class CryptoAlgSpec
             .compile
             .resource
             .toList
-        } yield {
-          assertEquals(roundTrip, materializedBytes)
-        }
+        } yield roundTrip
 
-      testResource.use(_ => IO.unit)
+      testResource.use { roundTrip => IO {
+        assertEquals(roundTrip, materializedBytes)
+      }}
     }
   }
 
@@ -73,7 +72,7 @@ class CryptoAlgSpec
                      )
     val genChunkSizeTestInputs: Gen[Inputs] =
       for {
-        keyPairR <- arbWeakKeyPair[IO](blocker).arbitrary
+        keyPairR <- genWeakKeyPair[IO](blocker)
         encryptionChunkSize <- arbitrary[ChunkSize]
         // since the cryptotext is compressed, we need to generate at least 10x the chunk size to
         // be fairly confident that there will be at least one full-sized chunk
@@ -95,21 +94,17 @@ class CryptoAlgSpec
         } yield chunkSizes
 
       testResource.use(chunkSizes => IO {
-        if (bytes.compile.toList.size % encryptionChunkSize.value == 0)
-          assertEquals(chunkSizes, Set(encryptionChunkSize.value))
-        else {
-          Assert(chunkSizes.contains(encryptionChunkSize.value))
-          Assert(2 == chunkSizes.size)
-        }
+        Assert(chunkSizes.contains(encryptionChunkSize.value))
+        Assert(Set(1, 2) contains chunkSizes.size)
       })
     }
   }
 
   test("CryptoAlg should support armoring a PGP value") {
     val (blocker, crypto) = resource()
-    implicit val arbKeyPair: Arbitrary[Resource[IO, PGPKeyPair]] = arbWeakKeyPair(blocker)
+    implicit val arbKeyPair: Arbitrary[Resource[IO, PGPKeyPair]] = arbWeakKeyPair[IO](blocker)
 
-    forAllF(arbPgpBytes[IO].arbitrary) { (bytesR: Resource[IO, Array[Byte]]) =>
+    forAllF(genPgpBytes[IO]) { (bytesR: Resource[IO, Array[Byte]]) =>
       val testResource =
         for {
           blocker <- Blocker[IO]
@@ -139,7 +134,7 @@ class CryptoAlgSpec
                       decryptionChunkSize: ChunkSize,
                       collectionR: Resource[IO, PGPSecretKeyRingCollection]
                      )
-    implicit val arbKeyPair: Arbitrary[Resource[IO, PGPKeyPair]] = arbWeakKeyPair(blocker)
+    implicit val arbKeyPair: Arbitrary[Resource[IO, PGPKeyPair]] = arbWeakKeyPair[IO](blocker)
     val genInputs: Gen[Inputs] =
       for {
         passphrase <- arbitrary[Array[Char]]
@@ -173,7 +168,7 @@ class CryptoAlgSpec
 
   test("CryptoAlg should round trip the plaintext using a key ring") {
     val (blocker, crypto) = resource()
-    implicit val arbKeyPair: Arbitrary[Resource[IO, PGPKeyPair]] = arbWeakKeyPair(blocker)
+    implicit val arbKeyPair: Arbitrary[Resource[IO, PGPKeyPair]] = arbWeakKeyPair[IO](blocker)
 
     forAllNoShrinkF { (keyPairR: Resource[IO, PGPKeyPair],
                        bytesG: Stream[Pure, Byte],
