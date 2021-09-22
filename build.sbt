@@ -11,7 +11,7 @@ lazy val V = new {
   val refined = "0.9.20"
   val shapeless = "2.3.7"
   val log4cats = "1.3.1"
-  val catsScalacheck = "0.3.0"
+  val catsScalacheck = "0.3.1"
   val scalaCollectionCompat = "2.2.0"
 }
 
