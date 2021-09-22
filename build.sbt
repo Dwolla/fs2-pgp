@@ -115,7 +115,7 @@ lazy val `pgp-testkit`: Project = (project in file("testkit"))
         "org.scalactic" %% "scalactic" % "3.2.9",
         "org.scalatest" %% "scalatest-core" % "3.2.10",
         "org.scalatest" %% "scalatest-matchers-core" % "3.2.10",
-        "org.scalatestplus" %% "scalacheck-1-15" % "3.2.9.0",
+        "org.scalatestplus" %% "scalacheck-1-15" % "3.2.10.0",
         "org.typelevel" %% "cats-core" % V.cats,
         "org.typelevel" %% "cats-effect" % V.catsEffect,
         "eu.timepit" %% "refined" % V.refined,
