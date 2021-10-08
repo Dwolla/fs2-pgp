@@ -12,7 +12,7 @@ lazy val V = new {
   val shapeless = "2.3.7"
   val log4cats = "2.1.1"
   val catsScalacheck = "0.3.0"
-  val scalaCollectionCompat = "2.2.0"
+  val scalaCollectionCompat = "2.5.0"
 }
 
 inThisBuild(List(
