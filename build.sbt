@@ -112,7 +112,7 @@ lazy val `pgp-testkit`: Project = (project in file("testkit"))
         "com.codecommit" %% "cats-effect-testing-scalatest-scalacheck" % V.catsEffectTestingScalatestScalacheck,
         "org.typelevel" %% "log4cats-core" % V.log4cats,
         "org.scalacheck" %% "scalacheck" % "1.15.4",
-        "org.scalactic" %% "scalactic" % "3.2.9",
+        "org.scalactic" %% "scalactic" % "3.2.10",
         "org.scalatest" %% "scalatest-core" % "3.2.9",
         "org.scalatest" %% "scalatest-matchers-core" % "3.2.9",
         "org.scalatestplus" %% "scalacheck-1-15" % "3.2.10.0",
