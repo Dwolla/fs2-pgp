@@ -13,6 +13,7 @@ import org.scalatest.flatspec._
 import org.typelevel.log4cats.Logger
 
 import java.io.ByteArrayOutputStream
+import cats.effect.Resource
 
 class CryptoAlgSpec
   extends FixtureAsyncFlatSpec
@@ -20,7 +21,7 @@ class CryptoAlgSpec
     with CryptoArbitraries
     with Fs2PgpSpec {
 
-  override def resource: Resource[IO, (Blocker, CryptoAlg[IO])] = Blocker[IO].mproduct(CryptoAlg[IO](_))
+  override def resource: Resource[IO, (Blocker, CryptoAlg[IO])] = Resource.unit[IO].mproduct(CryptoAlg[IO](_))
 
   private implicit val noOpLogger: Logger[IO] = NoOpLogger[IO]()
 
@@ -84,7 +85,7 @@ class CryptoAlgSpec
 
     forAll(arbPgpBytes[IO].arbitrary, MinSuccessful(1)) { (bytesR: Resource[IO, Array[Byte]]) =>
       for {
-        blocker <- Blocker[IO]
+        blocker <- Resource.unit[IO]
         bytes <- bytesR
         armored <- Stream.emits(bytes).through(crypto.armor()).through(text.utf8Decode).compile.resource.string
         expected <- Resource.eval {

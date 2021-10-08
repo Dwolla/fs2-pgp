@@ -17,6 +17,7 @@ import org.scalacheck._
 import org.scalacheck.cats.implicits._
 
 import scala.jdk.CollectionConverters._
+import cats.effect.Sync
 
 trait CryptoArbitraries { self: PgpArbitraries =>
   def genNBytesBetween(min: Int, max: Int): Gen[Stream[Pure, Byte]] =
@@ -40,11 +41,11 @@ trait CryptoArbitraries { self: PgpArbitraries =>
     chooseRefinedNum[Refined, Int, Positive](1024, 4096).map(tagChunkSize)
   }
 
-  def pgpKeyRingGenerator[F[_] : Sync : ContextShift](blocker: Blocker)
+  def pgpKeyRingGenerator[F[_] : Sync : ContextShift]
                                                      (keyRingId: String,
                                                       keyPair: PGPKeyPair,
                                                       passphrase: Array[Char]): F[PGPKeyRingGenerator] =
-    blocker.delay {
+    Sync[F].blocking {
       val pgpContentSignerBuilder = new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA1)
       val dc = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1)
       val keyEncryptor = new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.CAST5).build(passphrase)
@@ -60,8 +61,7 @@ trait CryptoArbitraries { self: PgpArbitraries =>
       )
     }
 
-  def genPGPSecretKeyRingCollection[F[_] : Sync : ContextShift](blocker: Blocker,
-                                                                passphrase: Array[Char])
+  def genPGPSecretKeyRingCollection[F[_] : Sync : ContextShift](passphrase: Array[Char])
                                                                (implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Gen[Resource[F, PGPSecretKeyRingCollection]] =
     (arbitrary[Resource[F, PGPKeyPair]], arbitrary[String]).mapN { (keyPairR, keyRingId) =>
       for {

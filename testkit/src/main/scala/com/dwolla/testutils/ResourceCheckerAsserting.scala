@@ -7,8 +7,9 @@ import org.scalatest.exceptions._
 import org.scalatestplus.scalacheck._
 
 import scala.concurrent.duration._
+import cats.effect.Temporal
 
-class ResourceCheckerAsserting[F[_] : ConcurrentEffect : Timer, A](timeout: FiniteDuration = 1.minute)
+class ResourceCheckerAsserting[F[_] : ConcurrentEffect : Temporal, A](timeout: FiniteDuration = 1.minute)
   extends CheckerAsserting.CheckerAssertingImpl[Resource[F, A]] {
 
   private val teca = new TimeoutEffectCheckerAsserting[F, A](timeout)

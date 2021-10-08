@@ -6,6 +6,7 @@ import cats.syntax.all._
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 
 import java.util.concurrent.atomic.AtomicInteger
+import cats.effect.Sync
 
 sealed trait BouncyCastleResource
 object BouncyCastleResource {
@@ -37,15 +38,15 @@ object BouncyCastleResource {
         Security.removeProvider(name)
     }
 
-  def apply[F[_] : Sync : ContextShift](blocker: Blocker): Resource[F, BouncyCastleResource] = {
+  def apply[F[_] : Sync : ContextShift]: Resource[F, BouncyCastleResource] = {
     def registerBouncyCastle: F[String] =
       for {
-        provider <- blocker.delay(new BouncyCastleProvider)
-        _ <- blocker.delay(register(provider))
+        provider <- Sync[F].blocking(new BouncyCastleProvider)
+        _ <- Sync[F].blocking(register(provider))
       } yield provider.getName
 
     def removeBouncyCastle(name: String): F[Unit] =
-      blocker.delay(deregister(name))
+      Sync[F].blocking(deregister(name))
 
     Resource.make(registerBouncyCastle)(removeBouncyCastle).as(new BouncyCastleResource {})
   }

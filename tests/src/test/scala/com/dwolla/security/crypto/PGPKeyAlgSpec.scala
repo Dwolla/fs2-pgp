@@ -16,6 +16,7 @@ import org.scalacheck.Arbitrary
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalatest.flatspec._
 import scala.jdk.CollectionConverters._
+import cats.effect.{ Resource, Sync }
 
 class PGPKeyAlgSpec
   extends FixtureAsyncFlatSpec
@@ -24,7 +25,7 @@ class PGPKeyAlgSpec
     with DateMatchers {
   private implicit val L: Logger[IO] = NoOpLogger[IO]()
 
-  override def resource: Resource[IO, Blocker] = Blocker[IO]
+  override def resource: Resource[IO, Blocker] = Resource.unit[IO]
 
   behavior of "PGPKeyAlg"
 
@@ -110,13 +111,13 @@ class PGPKeyAlgSpec
         val armoredKey =
           (for {
             crypto <- CryptoAlg[IO](blocker)
-            secretKey <- Resource.eval(blocker.delay {
+            secretKey <- Resource.eval(Sync[IO].blocking {
               val sha1Calc: PGPDigestCalculator = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1)
               new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, "identity", sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA256), new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256, sha1Calc).setProvider("BC").build(passphrase))
             })
             armoredKey <-
               readOutputStream(blocker, 4096) { os =>
-                blocker.delay(secretKey.encode(os))
+                Sync[IO].blocking(secretKey.encode(os))
               }
                 .through(crypto.armor())
                 .through(text.utf8Decode)
@@ -141,13 +142,13 @@ class PGPKeyAlgSpec
         val armoredKey =
           (for {
             crypto <- CryptoAlg[IO](blocker)
-            secretKey <- Resource.eval(blocker.delay {
+            secretKey <- Resource.eval(Sync[IO].blocking {
               val sha1Calc: PGPDigestCalculator = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1)
               new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, "identity", sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA256), new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256, sha1Calc).setProvider("BC").build(passphrase))
             })
             armoredKey <-
               readOutputStream(blocker, 4096) { os =>
-                blocker.delay(secretKey.encode(os))
+                Sync[IO].blocking(secretKey.encode(os))
               }
                 .through(crypto.armor())
                 .through(text.utf8Decode)

@@ -10,6 +10,7 @@ import fs2._
 import org.bouncycastle.openpgp._
 import org.bouncycastle.openpgp.operator.bc.{BcPBESecretKeyDecryptorBuilder, BcPGPDigestCalculatorProvider}
 import org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator
+import cats.effect.Sync
 
 trait PGPKeyAlg[F[_]] {
   def readPublicKey(key: String): F[PGPPublicKey]
@@ -19,7 +20,7 @@ trait PGPKeyAlg[F[_]] {
 
 object PGPKeyAlg {
   class PartiallyAppliedPGPKeyAlg[F[_]] private[PGPKeyAlg] () {
-    def apply[G[_] : Stream.Compiler[*[_], F] : Sync : ContextShift](blocker: Blocker)
+    def apply[G[_] : Stream.Compiler[*[_], F] : Sync : ContextShift]
                                                                     (implicit F: MonadError[F, Throwable]): PGPKeyAlg[F] = new PGPKeyAlg[F] {
       import scala.jdk.CollectionConverters._
 
@@ -34,7 +35,7 @@ object PGPKeyAlg {
                                   passphrase: Array[Char]): F[PGPPrivateKey] =
         secretKeyStream(key)
           .evalMap { secretKey =>
-            blocker.delay {
+            Sync[G].blocking {
               val digestCalculatorProvider = new BcPGPDigestCalculatorProvider()
               val decryptor = new BcPBESecretKeyDecryptorBuilder(digestCalculatorProvider).build(passphrase)
               secretKey.extractPrivateKey(decryptor)
@@ -52,14 +53,14 @@ object PGPKeyAlg {
           .lastOrError
 
       private def keyBytes(armored: String): G[ByteArrayInputStream] =
-        blocker.delay {
+        Sync[G].blocking {
           new ByteArrayInputStream(armored.getBytes(Charset.forName("UTF-8")))
         }
 
       private def publicKeyStream(key: String): Stream[G, PGPPublicKey] =
         for {
           is <- Stream.eval(keyBytes(key))
-          keyRingCollection <- Stream.eval(blocker.delay {
+          keyRingCollection <- Stream.eval(Sync[G].blocking {
             new PGPPublicKeyRingCollection(PGPUtil.getDecoderStream(is), new JcaKeyFingerprintCalculator())
           })
           keyRing <- Stream.fromBlockingIterator(blocker, keyRingCollection.getKeyRings.asScala)
@@ -69,7 +70,7 @@ object PGPKeyAlg {
       private def secretKeyRingCollection(keys: String): G[PGPSecretKeyRingCollection] =
         for {
           is <- keyBytes(keys)
-          keyRingCollection <- blocker.delay {
+          keyRingCollection <- Sync[G].blocking {
             new PGPSecretKeyRingCollection(PGPUtil.getDecoderStream(is), new JcaKeyFingerprintCalculator())
           }
         } yield keyRingCollection

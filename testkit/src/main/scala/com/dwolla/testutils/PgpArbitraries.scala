@@ -17,27 +17,27 @@ import org.scalacheck.{Arbitrary, _}
 import java.security.KeyPairGenerator
 import java.util.Date
 import scala.concurrent.duration.MILLISECONDS
+import cats.effect.Sync
 
 trait PgpArbitraries {
   type KeySizePred = GreaterEqual[W.`384`.T]
   type KeySize = Int Refined KeySizePred
 
-  def arbStrongKeyPair[F[_] : Sync : ContextShift : Clock](blocker: Blocker): Arbitrary[Resource[F, PGPKeyPair]] = Arbitrary {
+  def arbStrongKeyPair[F[_] : Sync : ContextShift : Clock]: Arbitrary[Resource[F, PGPKeyPair]] = Arbitrary {
     for {
       keySize <- Gen.oneOf[KeySize](2048, 4096)
       keyPair <- arbKeyPair[F](blocker, keySize).arbitrary
     } yield keyPair
   }
 
-  def arbWeakKeyPair[F[_] : Sync : ContextShift : Clock](blocker: Blocker): Arbitrary[Resource[F, PGPKeyPair]] =
+  def arbWeakKeyPair[F[_] : Sync : ContextShift : Clock]: Arbitrary[Resource[F, PGPKeyPair]] =
     arbKeyPair[F](blocker, 512)
 
-  def arbKeyPair[F[_] : Sync : ContextShift : Clock](blocker: Blocker,
-                                                     keySize: KeySize): Arbitrary[Resource[F, PGPKeyPair]] = Arbitrary {
+  def arbKeyPair[F[_] : Sync : ContextShift : Clock](keySize: KeySize): Arbitrary[Resource[F, PGPKeyPair]] = Arbitrary {
     BouncyCastleResource[F](blocker)
       .evalMap { _ =>
         for {
-          generator <- blocker.delay {
+          generator <- Sync[F].blocking {
             val instance = KeyPairGenerator.getInstance("RSA", "BC")
             instance.initialize(keySize.value)
             instance

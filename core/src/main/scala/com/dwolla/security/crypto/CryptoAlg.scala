@@ -13,6 +13,7 @@ import org.bouncycastle.openpgp.operator.jcajce._
 import org.typelevel.log4cats.Logger
 
 import java.io._
+import cats.effect.Sync
 
 trait CryptoAlg[F[_]] {
   def encrypt(key: PGPPublicKey,
@@ -65,9 +66,9 @@ trait CryptoAlg[F[_]] {
 }
 
 object CryptoAlg {
-  private def addKey[F[_] : Sync : ContextShift](blocker: Blocker)
+  private def addKey[F[_] : Sync : ContextShift]
                                                 (pgpEncryptedDataGenerator: PGPEncryptedDataGenerator, key: PGPPublicKey): F[Unit] =
-    blocker.delay(pgpEncryptedDataGenerator.addMethod(new JcePublicKeyKeyEncryptionMethodGenerator(key)))
+    Sync[F].blocking(pgpEncryptedDataGenerator.addMethod(new JcePublicKeyKeyEncryptionMethodGenerator(key)))
 
   private type PgpEncryptionPipelineComponents = (PGPEncryptedDataGenerator, PGPCompressedDataGenerator, PGPLiteralDataGenerator)
 
@@ -76,14 +77,13 @@ object CryptoAlg {
    * created matters, because they need to be closed in the right
    * order for the encrypted data to be written out correctly.
    */
-  private def pgpGenerators[F[_] : Sync : ContextShift](blocker: Blocker,
-                                                        encryption: Encryption,
+  private def pgpGenerators[F[_] : Sync : ContextShift](encryption: Encryption,
                                                         compression: Compression,
                                                        ): Resource[F, PgpEncryptionPipelineComponents] =
     for {
-      pgpEncryptedDataGenerator <- Resource.make(blocker.delay(new PGPEncryptedDataGenerator(new JcePGPDataEncryptorBuilder(encryption.tag).setWithIntegrityPacket(true))))(g => blocker.delay(g.close()))
-      pgpCompressedDataGenerator <- Resource.make(blocker.delay(new PGPCompressedDataGenerator(compression.tag)))(c => blocker.delay(c.close()))
-      pgpLiteralDataGenerator <- Resource.make(blocker.delay(new PGPLiteralDataGenerator()))(g => blocker.delay(g.close()))
+      pgpEncryptedDataGenerator <- Resource.make(Sync[F].blocking(new PGPEncryptedDataGenerator(new JcePGPDataEncryptorBuilder(encryption.tag).setWithIntegrityPacket(true))))(g => Sync[F].blocking(g.close()))
+      pgpCompressedDataGenerator <- Resource.make(Sync[F].blocking(new PGPCompressedDataGenerator(compression.tag)))(c => Sync[F].blocking(c.close()))
+      pgpLiteralDataGenerator <- Resource.make(Sync[F].blocking(new PGPLiteralDataGenerator()))(g => Sync[F].blocking(g.close()))
     } yield (pgpEncryptedDataGenerator, pgpCompressedDataGenerator, pgpLiteralDataGenerator)
 
   /**
@@ -95,8 +95,7 @@ object CryptoAlg {
    *
    * Plaintext -> "Literal Data" Packetizer -> Compressor -> Encryptor -> OutputStream provided by caller
    */
-  private[crypto] def encryptingOutputStream[F[_] : Sync : ContextShift : Clock](blocker: Blocker,
-                                                                                 key: PGPPublicKey,
+  private[crypto] def encryptingOutputStream[F[_] : Sync : ContextShift : Clock](key: PGPPublicKey,
                                                                                  chunkSize: ChunkSize,
                                                                                  fileName: Option[String],
                                                                                  encryption: Encryption,
@@ -110,13 +109,13 @@ object CryptoAlg {
       .evalMap { case (pgpEncryptedDataGenerator, pgpCompressedDataGenerator, pgpLiteralDataGenerator) =>
         for {
           now <- Clock[F].realTime(scala.concurrent.duration.MILLISECONDS).map(new java.util.Date(_))
-          encryptor <- blocker.delay(pgpEncryptedDataGenerator.open(outputStreamIntoWhichToWriteEncryptedBytes, Array.ofDim[Byte](chunkSize.value)))
-          compressor <- blocker.delay(pgpCompressedDataGenerator.open(encryptor))
-          literalizer <- blocker.delay(pgpLiteralDataGenerator.open(compressor, packetFormat.tag, fileName.getOrElse(PGPLiteralData.CONSOLE), now, Array.ofDim[Byte](chunkSize.value)))
+          encryptor <- Sync[F].blocking(pgpEncryptedDataGenerator.open(outputStreamIntoWhichToWriteEncryptedBytes, Array.ofDim[Byte](chunkSize.value)))
+          compressor <- Sync[F].blocking(pgpCompressedDataGenerator.open(encryptor))
+          literalizer <- Sync[F].blocking(pgpLiteralDataGenerator.open(compressor, packetFormat.tag, fileName.getOrElse(PGPLiteralData.CONSOLE), now, Array.ofDim[Byte](chunkSize.value)))
         } yield literalizer
       }
 
-  def apply[F[_] : ConcurrentEffect : ContextShift : Clock : Logger](blocker: Blocker): Resource[F, CryptoAlg[F]] =
+  def apply[F[_] : ConcurrentEffect : ContextShift : Clock : Logger]: Resource[F, CryptoAlg[F]] =
     for {
       _ <- BouncyCastleResource[F](blocker)
     } yield new CryptoAlg[F] {
@@ -159,7 +158,7 @@ object CryptoAlg {
          */
         def pgpLiteralDataToBytes(pld: PGPLiteralData): Stream[F, Byte] =
           Logger[Stream[F, *]].trace(s"found literal data for file: ${pld.getFileName} and format: ${pld.getFormat}") >>
-            readInputStream(blocker.delay(pld.getDataStream), chunkSize.value, blocker)
+            readInputStream(Sync[F].blocking(pld.getDataStream), chunkSize.value, blocker)
 
         def pgpEncryptedDataListToBytes(pedl: PGPEncryptedDataList): Stream[F, Byte] = {
           Logger[Stream[F, *]].trace(s"found ${pedl.size()} encrypted data packets") >>
@@ -168,7 +167,7 @@ object CryptoAlg {
                 case pbe: PGPPublicKeyEncryptedData =>
                   CanCreateDecryptorFactory[F, A]
                     .publicKeyDataDecryptorFactory(keylike, pbe.getKeyID)
-                    .flatMap(factory => blocker.delay(pbe.getDataStream(factory)))
+                    .flatMap(factory => Sync[F].blocking(pbe.getDataStream(factory)))
                 case other =>
                   Logger[F].error(EncryptionTypeError)(s"found wrong type of encrypted data: $other") >>
                     EncryptionTypeError.raiseError[F, InputStream]
@@ -203,7 +202,7 @@ object CryptoAlg {
         _.through(toInputStream[F])
           .evalTap(_ => Logger[F].trace("we have an InputStream containing the cryptotext"))
           .evalMap { cryptoIS =>
-            blocker.delay {
+            Sync[F].blocking {
               PGPUtil.getDecoderStream(cryptoIS)
             }
           }
@@ -229,7 +228,7 @@ object CryptoAlg {
 
       override def armor(chunkSize: ChunkSize): Pipe[F, Byte, Byte] = bytes =>
         readOutputStream(blocker, chunkSize.value) { out =>
-          Stream.resource(Resource.fromAutoCloseableBlocking(blocker)(blocker.delay(new ArmoredOutputStream(out))))
+          Stream.resource(Resource.fromAutoCloseableBlocking(blocker)(Sync[F].blocking(new ArmoredOutputStream(out))))
             .flatMap(writeToArmorer(_)(bytes))
             .compile
             .drain
