@@ -10,7 +10,7 @@ lazy val V = new {
   val catsEffectTestingScalatestScalacheck = "0.5.4"
   val refined = "0.9.27"
   val shapeless = "2.3.7"
-  val log4cats = "2.1.1"
+  val log4cats = "1.3.1"
   val catsScalacheck = "0.3.0"
   val scalaCollectionCompat = "2.5.0"
 }
