@@ -3,10 +3,10 @@ lazy val V = new {
   val SCALA_2_13 = "2.13.6"
   val Scalas = Seq(SCALA_2_13, SCALA_2_12)
   val cats = "2.6.1"
-  val catsEffect = "2.5.1"
-  val fs2 = "2.5.9"
+  val catsEffect = "2.5.4"
+  val fs2 = "2.5.10"
   val bouncyCastle = "1.69"
-  val scalaTest = "3.2.3"
+  val scalaTest = "3.2.10"
   val catsEffectTestingScalatestScalacheck = "0.5.4"
   val refined = "0.9.27"
   val shapeless = "2.3.7"
@@ -112,7 +112,7 @@ lazy val `pgp-testkit`: Project = (project in file("testkit"))
         "com.codecommit" %% "cats-effect-testing-scalatest-scalacheck" % V.catsEffectTestingScalatestScalacheck,
         "org.typelevel" %% "log4cats-core" % V.log4cats,
         "org.scalacheck" %% "scalacheck" % "1.15.4",
-        "org.scalactic" %% "scalactic" % "3.2.9",
+        "org.scalactic" %% "scalactic" % "3.2.10",
         "org.scalatest" %% "scalatest-core" % "3.2.10",
         "org.scalatest" %% "scalatest-matchers-core" % "3.2.10",
         "org.scalatestplus" %% "scalacheck-1-15" % "3.2.10.0",
