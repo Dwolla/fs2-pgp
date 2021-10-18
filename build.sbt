@@ -11,7 +11,7 @@ lazy val V = new {
   val scalaCollectionCompat = "2.5.0"
   val munit = "0.7.29"
   val scalacheckEffect = "1.0.2"
-  val munitCatsEffect = "1.0.5"
+  val munitCatsEffect = "1.0.6"
   val expecty = "0.15.4"
   val cats = "2.6.1"
 }
