@@ -119,7 +119,7 @@ lazy val tests = (projectMatrix in file("tests"))
         "eu.timepit" %% "refined-scalacheck" % V.refined % Test,
         "io.chrisdavenport" %% "cats-scalacheck" % V.catsScalacheck % Test,
         "org.typelevel" %% "log4cats-noop" % CE3_V.log4cats % Test,
-        "dev.holt" %% "java-time-literals" % "1.0.0" % Test,
+        "dev.holt" %% "java-time-literals" % "1.1.0" % Test,
         "com.eed3si9n.expecty" %% "expecty" % V.expecty % Test,
       )
     },
@@ -137,7 +137,7 @@ lazy val tests = (projectMatrix in file("tests"))
         "eu.timepit" %% "refined-scalacheck" % V.refined % Test,
         "io.chrisdavenport" %% "cats-scalacheck" % V.catsScalacheck % Test,
         "org.typelevel" %% "log4cats-noop" % CE3_V.log4cats % Test,
-        "dev.holt" %% "java-time-literals" % "1.0.0" % Test,
+        "dev.holt" %% "java-time-literals" % "1.1.0" % Test,
         "com.eed3si9n.expecty" %% "expecty" % V.expecty % Test,
       )
     },
