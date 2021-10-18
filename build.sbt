@@ -9,9 +9,9 @@ lazy val V = new {
   val shapeless = "2.3.7"
   val catsScalacheck = "0.3.0"
   val scalaCollectionCompat = "2.5.0"
-  val munit = "0.7.28"
+  val munit = "0.7.29"
   val scalacheckEffect = "1.0.3"
-  val munitCatsEffect = "1.0.5"
+  val munitCatsEffect = "1.0.6"
   val expecty = "0.15.4"
   val cats = "2.6.1"
 }
@@ -119,7 +119,7 @@ lazy val tests = (projectMatrix in file("tests"))
         "eu.timepit" %% "refined-scalacheck" % V.refined % Test,
         "io.chrisdavenport" %% "cats-scalacheck" % V.catsScalacheck % Test,
         "org.typelevel" %% "log4cats-noop" % CE3_V.log4cats % Test,
-        "dev.holt" %% "java-time-literals" % "1.0.0" % Test,
+        "dev.holt" %% "java-time-literals" % "1.1.0" % Test,
         "com.eed3si9n.expecty" %% "expecty" % V.expecty % Test,
       )
     },
@@ -137,7 +137,7 @@ lazy val tests = (projectMatrix in file("tests"))
         "eu.timepit" %% "refined-scalacheck" % V.refined % Test,
         "io.chrisdavenport" %% "cats-scalacheck" % V.catsScalacheck % Test,
         "org.typelevel" %% "log4cats-noop" % CE3_V.log4cats % Test,
-        "dev.holt" %% "java-time-literals" % "1.0.0" % Test,
+        "dev.holt" %% "java-time-literals" % "1.1.0" % Test,
         "com.eed3si9n.expecty" %% "expecty" % V.expecty % Test,
       )
     },
