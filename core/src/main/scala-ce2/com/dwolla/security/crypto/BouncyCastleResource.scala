@@ -16,7 +16,7 @@ object BouncyCastleResource {
       val previousCount = timesBouncyCastleHasBeenRegistered.getAndIncrement()
       val position = Security.addProvider(provider)
 
-      /**
+      /*
        * If BouncyCastle was already registered (as indicated by the returned
        * position being -1) but we didn't register it (as indicated
        * by the previous count being 0, then increment the counter so we
