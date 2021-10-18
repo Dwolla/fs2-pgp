@@ -1,6 +1,47 @@
 # fs2-pgp
 
-A library for encrypting and decrypting fs2 `Stream[F, Byte]`.
+A library for encrypting and decrypting fs2 `Stream[F, Byte]` using PGP.
+
+<table>
+<thead>
+<tr>
+<th>Artifact</th>
+<th>Description</th>
+<th align="center">Cats Effect Version</th>
+<th align="center">fs2 Version</th>
+<th align="center">Scala 2.12</th>
+<th align="center">Scala 2.13</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>"fs2-pgp"</code></td>
+<td rowspan="2">Load PGP keys and use them to encrypt, decrypt, and armor byte streams.</td>
+<td align="center">Cats Effect 3</td>
+<td align="center">fs2 3.x</td>
+<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+</tr>
+<tr>
+<td><code>"fs2-pgp-ce2"</code></td>
+<td align="center">Cats Effect 2</td>
+<td align="center">fs2 2.x</td>
+</tr>
+<tr>
+<td><code>"pgp-testkit"</code></td>
+<td rowspan="2">ScalaCheck Generators and Arbitrary instances for PGP classes</td>
+<td align="center">Cats Effect 3</td>
+<td align="center">fs2 3.x</td>
+<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+</tr>
+<tr>
+<td><code>"pgp-testkit-ce2"</code></td>
+<td align="center">Cats Effect 2</td>
+<td align="center">fs2 2.x</td>
+</tr>
+</tbody>
+</table>
 
 ## Keys
 
@@ -74,12 +115,12 @@ implicit val L: Logger[IO] = new Logger[IO] {
 val key: PGPPublicKey = ??? // from above
 
 (for {
-  crypto <- Stream.resource(Blocker[IO] >>= CryptoAlg[IO])
+  crypto <- Stream.resource(CryptoAlg[IO])
   output <- Stream.emit("hello world")
-                  .through(utf8Encode)
+                  .through(utf8.encode)
                   .through(crypto.encrypt(key))
                   .through(crypto.armor())
-                  .through(utf8Decode)
+                  .through(utf8.decode)
 } yield output).compile.string.unsafeRunSync()
 val res1: String =
 "-----BEGIN PGP MESSAGE-----

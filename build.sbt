@@ -1,18 +1,31 @@
+import ConfigAxes._
+
 lazy val V = new {
   val SCALA_2_12 = "2.12.15"
   val SCALA_2_13 = "2.13.6"
   val Scalas = Seq(SCALA_2_13, SCALA_2_12)
-  val cats = "2.6.1"
-  val catsEffect = "2.5.4"
-  val fs2 = "2.5.10"
   val bouncyCastle = "1.69"
-  val scalaTest = "3.2.10"
-  val catsEffectTestingScalatestScalacheck = "0.5.4"
   val refined = "0.9.27"
   val shapeless = "2.3.7"
-  val log4cats = "1.3.1"
-  val catsScalacheck = "0.3.1"
+  val catsScalacheck = "0.3.0"
   val scalaCollectionCompat = "2.5.0"
+  val munit = "0.7.28"
+  val scalacheckEffect = "1.0.2"
+  val munitCatsEffect = "1.0.5"
+  val expecty = "0.15.4"
+  val cats = "2.6.1"
+}
+
+lazy val CE2_V = new {
+  val catsEffect = "2.5.4"
+  val fs2 = "2.5.10"
+  val log4cats = "1.3.1"
+}
+
+lazy val CE3_V = new {
+  val catsEffect = "3.2.3"
+  val fs2 = "3.1.0"
+  val log4cats = "2.1.1"
 }
 
 inThisBuild(List(
@@ -21,6 +34,7 @@ inThisBuild(List(
   organization := "com.dwolla",
   homepage := Option(url("https://github.com/Dwolla/fs2-pgp")),
   licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
+  startYear := Option(2020),
   developers := List(
     Developer(
       "bpholt",
@@ -29,28 +43,9 @@ inThisBuild(List(
       url("https://dwolla.com")
     )
   ),
-  githubWorkflowTargetTags ++= Seq("v*"),
-  githubWorkflowJavaVersions := Seq("adopt@1.8", "adopt@1.11"),
-  githubWorkflowPublishTargetBranches :=
-    Seq(RefPredicate.StartsWith(Ref.Tag("v"))),
-  githubWorkflowBuild := Seq(WorkflowStep.Sbt(List("undeclaredCompileDependenciesTest", "unusedCompileDependenciesTest", "test"), name = Some("Build and test project"))),
-  githubWorkflowPublish := Seq(WorkflowStep.Sbt(List("ci-release"))),
-  githubWorkflowPublish := Seq(
-    WorkflowStep.Sbt(
-      List("ci-release"),
-      env = Map(
-        "PGP_PASSPHRASE" -> "${{ secrets.PGP_PASSPHRASE }}",
-        "PGP_SECRET" -> "${{ secrets.PGP_SECRET }}",
-        "SONATYPE_PASSWORD" -> "${{ secrets.SONATYPE_PASSWORD }}",
-        "SONATYPE_USERNAME" -> "${{ secrets.SONATYPE_USERNAME }}"
-      )
-    )
-  ),
 ))
 
 lazy val commonSettings = Seq(
-  startYear := Option(2020),
-  resolvers += Resolver.sonatypeRepo("releases"),
   addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.13.2" cross CrossVersion.full),
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
   Compile / scalacOptions ++= {
@@ -67,69 +62,143 @@ lazy val commonSettings = Seq(
   },
 )
 
-lazy val `fs2-pgp`: Project = (project in file("core"))
-  .settings(Seq(
+lazy val `fs2-pgp` = (projectMatrix in file("core"))
+  .customRow(V.Scalas, Seq(CatsEffect2Axis, VirtualAxis.jvm), _.settings(
+    moduleName := s"${name.value}-ce2",
     description := "fs2 pipes for encrypting and decrypting streams with BouncyCastle PGP",
+    Compile / unmanagedSourceDirectories += (Compile / scalaSource).value.getParentFile / s"scala-${CatsEffect2Axis.directorySuffix}",
     libraryDependencies ++= {
       Seq(
         "org.typelevel" %% "cats-core" % V.cats,
-        "org.typelevel" %% "cats-effect" % V.catsEffect,
+        "org.typelevel" %% "cats-effect" % CE2_V.catsEffect,
         "org.bouncycastle" % "bcpg-jdk15on" % V.bouncyCastle,
         "org.bouncycastle" % "bcprov-jdk15on" % V.bouncyCastle,
-        "co.fs2" %% "fs2-core" % V.fs2,
-        "co.fs2" %% "fs2-io" % V.fs2,
+        "co.fs2" %% "fs2-core" % CE2_V.fs2,
+        "co.fs2" %% "fs2-io" % CE2_V.fs2,
         "com.chuusai" %% "shapeless" % V.shapeless,
         "org.scala-lang.modules" %% "scala-collection-compat" % V.scalaCollectionCompat,
-        "org.typelevel" %% "log4cats-core" % V.log4cats,
+        "org.typelevel" %% "log4cats-core" % CE2_V.log4cats,
         "eu.timepit" %% "refined" % V.refined,
       )
     },
     unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),
-  ) ++ commonSettings: _*)
-
-lazy val tests = (project in file("tests"))
-  .settings(Seq(
-    description := "Tests broken out into a separate project to break a circular dependency",
+  ))
+  .customRow(V.Scalas, Seq(CatsEffect3Axis, VirtualAxis.jvm), _.settings(
+    moduleName := s"${name.value}",
+    description := "fs2 pipes for encrypting and decrypting streams with BouncyCastle PGP",
+    Compile / unmanagedSourceDirectories += (Compile / scalaSource).value.getParentFile / s"scala-${CatsEffect3Axis.directorySuffix}",
     libraryDependencies ++= {
       Seq(
-        "org.scalatest" %% "scalatest" % V.scalaTest % Test,
-        "com.codecommit" %% "cats-effect-testing-scalatest-scalacheck" % V.catsEffectTestingScalatestScalacheck % Test,
+        "org.typelevel" %% "cats-core" % V.cats,
+        "org.typelevel" %% "cats-effect-kernel" % CE3_V.catsEffect,
+        "org.typelevel" %% "cats-effect" % CE3_V.catsEffect,
+        "org.bouncycastle" % "bcpg-jdk15on" % V.bouncyCastle,
+        "org.bouncycastle" % "bcprov-jdk15on" % V.bouncyCastle,
+        "co.fs2" %% "fs2-core" % CE3_V.fs2,
+        "co.fs2" %% "fs2-io" % CE3_V.fs2,
+        "com.chuusai" %% "shapeless" % V.shapeless,
+        "org.scala-lang.modules" %% "scala-collection-compat" % V.scalaCollectionCompat,
+        "org.typelevel" %% "log4cats-core" % CE3_V.log4cats,
+        "eu.timepit" %% "refined" % V.refined,
+      )
+    },
+    unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),
+  ))
+  .settings(commonSettings: _*)
+
+lazy val tests = (projectMatrix in file("tests"))
+  .customRow(V.Scalas, Seq(CatsEffect2Axis, VirtualAxis.jvm), _.settings(
+    description := "Tests broken out into a separate project to break a circular dependency",
+    Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / s"scala-${CatsEffect2Axis.directorySuffix}",
+    libraryDependencies ++= {
+      Seq(
+        "org.scalameta" %% "munit" % V.munit % Test,
+        "org.typelevel" %% "scalacheck-effect" % V.scalacheckEffect % Test,
+        "org.typelevel" %% "scalacheck-effect-munit" % V.scalacheckEffect % Test,
+        "org.typelevel" %% "munit-cats-effect-2" % V.munitCatsEffect % Test,
         "eu.timepit" %% "refined-scalacheck" % V.refined % Test,
         "io.chrisdavenport" %% "cats-scalacheck" % V.catsScalacheck % Test,
+        "org.typelevel" %% "log4cats-noop" % CE3_V.log4cats % Test,
+        "dev.holt" %% "java-time-literals" % "1.0.0" % Test,
+        "com.eed3si9n.expecty" %% "expecty" % V.expecty % Test,
       )
     },
     publish / skip := true,
-  ) ++ commonSettings: _*)
+  ))
+  .customRow(V.Scalas, Seq(CatsEffect3Axis, VirtualAxis.jvm), _.settings(
+    description := "Tests broken out into a separate project to break a circular dependency",
+    Test / unmanagedSourceDirectories += (Test / scalaSource).value.getParentFile / s"scala-${CatsEffect3Axis.directorySuffix}",
+    libraryDependencies ++= {
+      Seq(
+        "org.scalameta" %% "munit" % V.munit % Test,
+        "org.typelevel" %% "scalacheck-effect" % V.scalacheckEffect % Test,
+        "org.typelevel" %% "scalacheck-effect-munit" % V.scalacheckEffect % Test,
+        "org.typelevel" %% "munit-cats-effect-3" % V.munitCatsEffect % Test,
+        "eu.timepit" %% "refined-scalacheck" % V.refined % Test,
+        "io.chrisdavenport" %% "cats-scalacheck" % V.catsScalacheck % Test,
+        "org.typelevel" %% "log4cats-noop" % CE3_V.log4cats % Test,
+        "dev.holt" %% "java-time-literals" % "1.0.0" % Test,
+        "com.eed3si9n.expecty" %% "expecty" % V.expecty % Test,
+      )
+    },
+    publish / skip := true,
+  ))
   .dependsOn(`fs2-pgp`, `pgp-testkit`)
+  .settings(commonSettings: _*)
 
-lazy val `pgp-testkit`: Project = (project in file("testkit"))
-  .settings(Seq(
+lazy val `pgp-testkit` = (projectMatrix in file("testkit"))
+  .customRow(V.Scalas, Seq(CatsEffect2Axis, VirtualAxis.jvm), _.settings(
+    moduleName := s"${name.value}-ce2",
     description := "Scalacheck Arbitraries for PGP resources",
+    Compile / unmanagedSourceDirectories += (Compile / scalaSource).value.getParentFile / s"scala-${CatsEffect2Axis.directorySuffix}",
     libraryDependencies ++= {
       Seq(
         "org.bouncycastle" % "bcpg-jdk15on" % V.bouncyCastle,
         "org.bouncycastle" % "bcprov-jdk15on" % V.bouncyCastle % Runtime,
-        "com.codecommit" %% "cats-effect-testing-scalatest-scalacheck" % V.catsEffectTestingScalatestScalacheck,
-        "org.typelevel" %% "log4cats-core" % V.log4cats,
         "org.scalacheck" %% "scalacheck" % "1.15.4",
-        "org.scalactic" %% "scalactic" % "3.2.10",
-        "org.scalatest" %% "scalatest-core" % "3.2.10",
-        "org.scalatest" %% "scalatest-matchers-core" % "3.2.10",
-        "org.scalatestplus" %% "scalacheck-1-15" % "3.2.10.0",
         "org.typelevel" %% "cats-core" % V.cats,
-        "org.typelevel" %% "cats-effect" % V.catsEffect,
+        "org.typelevel" %% "cats-effect" % CE2_V.catsEffect,
         "eu.timepit" %% "refined" % V.refined,
         "com.chuusai" %% "shapeless" % V.shapeless,
         "eu.timepit" %% "refined-scalacheck" % V.refined,
         "io.chrisdavenport" %% "cats-scalacheck" % V.catsScalacheck,
-        "co.fs2" %% "fs2-core" % V.fs2,
+        "co.fs2" %% "fs2-core" % CE2_V.fs2,
         "org.scala-lang.modules" %% "scala-collection-compat" % V.scalaCollectionCompat
       )
     },
     unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),
-  ) ++ commonSettings: _*)
+  ))
+  .customRow(V.Scalas, Seq(CatsEffect3Axis, VirtualAxis.jvm), _.settings(
+    moduleName := s"${name.value}",
+    description := "Scalacheck Arbitraries for PGP resources",
+    Compile / unmanagedSourceDirectories += (Compile / scalaSource).value.getParentFile / s"scala-${CatsEffect3Axis.directorySuffix}",
+    libraryDependencies ++= {
+      Seq(
+        "org.bouncycastle" % "bcpg-jdk15on" % V.bouncyCastle,
+        "org.bouncycastle" % "bcprov-jdk15on" % V.bouncyCastle % Runtime,
+        "org.scalacheck" %% "scalacheck" % "1.15.4",
+        "org.typelevel" %% "cats-core" % V.cats,
+        "org.typelevel" %% "cats-effect-kernel" % CE3_V.catsEffect,
+        "org.typelevel" %% "cats-effect" % CE3_V.catsEffect,
+        "eu.timepit" %% "refined" % V.refined,
+        "com.chuusai" %% "shapeless" % V.shapeless,
+        "eu.timepit" %% "refined-scalacheck" % V.refined,
+        "io.chrisdavenport" %% "cats-scalacheck" % V.catsScalacheck,
+        "co.fs2" %% "fs2-core" % CE3_V.fs2,
+        "org.scala-lang.modules" %% "scala-collection-compat" % V.scalaCollectionCompat
+      )
+    },
+    unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),
+  ))
   .dependsOn(`fs2-pgp`)
+  .settings(commonSettings: _*)
 
 lazy val `fs2-pgp-root` = (project in file("."))
   .settings(publish / skip := true)
-  .aggregate(`fs2-pgp`, tests, `pgp-testkit`)
+  .aggregate(
+    Seq(
+      `fs2-pgp`,
+      tests,
+      `pgp-testkit`
+    ).flatMap(_.projectRefs): _*
+  )
