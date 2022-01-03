@@ -2,7 +2,7 @@ import ConfigAxes._
 
 lazy val V = new {
   val SCALA_2_12 = "2.12.15"
-  val SCALA_2_13 = "2.13.6"
+  val SCALA_2_13 = "2.13.7"
   val Scalas = Seq(SCALA_2_13, SCALA_2_12)
   val bouncyCastle = "1.69"
   val refined = "0.9.28"
