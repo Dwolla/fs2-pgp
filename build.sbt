@@ -13,7 +13,7 @@ lazy val V = new {
   val scalacheckEffect = "1.0.3"
   val munitCatsEffect = "1.0.7"
   val expecty = "0.15.4"
-  val cats = "2.6.1"
+  val cats = "2.7.0"
 }
 
 lazy val CE2_V = new {
