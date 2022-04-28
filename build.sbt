@@ -155,7 +155,7 @@ lazy val `pgp-testkit` = (projectMatrix in file("testkit"))
       Seq(
         "org.bouncycastle" % "bcpg-jdk15on" % V.bouncyCastle,
         "org.bouncycastle" % "bcprov-jdk15on" % V.bouncyCastle % Runtime,
-        "org.scalacheck" %% "scalacheck" % "1.15.4",
+        "org.scalacheck" %% "scalacheck" % "1.16.0",
         "org.typelevel" %% "cats-core" % V.cats,
         "org.typelevel" %% "cats-effect" % CE2_V.catsEffect,
         "eu.timepit" %% "refined" % V.refined,
@@ -176,7 +176,7 @@ lazy val `pgp-testkit` = (projectMatrix in file("testkit"))
       Seq(
         "org.bouncycastle" % "bcpg-jdk15on" % V.bouncyCastle,
         "org.bouncycastle" % "bcprov-jdk15on" % V.bouncyCastle % Runtime,
-        "org.scalacheck" %% "scalacheck" % "1.15.4",
+        "org.scalacheck" %% "scalacheck" % "1.16.0",
         "org.typelevel" %% "cats-core" % V.cats,
         "org.typelevel" %% "cats-effect-kernel" % CE3_V.catsEffect,
         "org.typelevel" %% "cats-effect" % CE3_V.catsEffect,
