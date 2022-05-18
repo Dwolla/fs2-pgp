@@ -19,7 +19,7 @@ lazy val V = new {
 lazy val CE2_V = new {
   val catsEffect = "2.5.4"
   val fs2 = "2.5.11"
-  val log4cats = "1.5.1"
+  val log4cats = "1.6.0"
 }
 
 lazy val CE3_V = new {
