@@ -16,29 +16,19 @@ A library for encrypting and decrypting fs2 `Stream[F, Byte]` using PGP.
 <tbody>
 <tr>
 <td><code>"fs2-pgp"</code></td>
-<td rowspan="2">Load PGP keys and use them to encrypt, decrypt, and armor byte streams.</td>
+<td>Load PGP keys and use them to encrypt, decrypt, and armor byte streams.</td>
 <td align="center">Cats Effect 3</td>
 <td align="center">fs2 3.x</td>
-<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
-<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
-</tr>
-<tr>
-<td><code>"fs2-pgp-ce2"</code></td>
-<td align="center">Cats Effect 2</td>
-<td align="center">fs2 2.x</td>
+<td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+<td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
 </tr>
 <tr>
 <td><code>"pgp-testkit"</code></td>
-<td rowspan="2">ScalaCheck Generators and Arbitrary instances for PGP classes</td>
+<td>ScalaCheck Generators and Arbitrary instances for PGP classes</td>
 <td align="center">Cats Effect 3</td>
 <td align="center">fs2 3.x</td>
-<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
-<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
-</tr>
-<tr>
-<td><code>"pgp-testkit-ce2"</code></td>
-<td align="center">Cats Effect 2</td>
-<td align="center">fs2 2.x</td>
+<td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+<td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
 </tr>
 </tbody>
 </table>
@@ -92,26 +82,12 @@ Read a `PGPPublicKey` using `PGPKeyAlg[F]`, then pipe your message bytes through
 ```scala
 import cats.effect._
 import cats.syntax.all._
-import io.chrisdavenport.log4cats.Logger
+import org.typelevel.log4cats.Logger
 import fs2._
 import fs2.text._
 import com.dwolla.security.crypto._
 import org.bouncycastle.openpgp._
 
-implicit val cs: ContextShift[IO] = IO.contextShift(scala.concurrent.ExecutionContext.global)
-implicit val t: Timer[IO] = IO.timer(scala.concurrent.ExecutionContext.global)
-implicit val L: Logger[IO] = new Logger[IO] {
-    override def error(t: Throwable)(message: => String): IO[Unit] = ().pure[IO]
-    override def warn(t: Throwable)(message: => String): IO[Unit] = ().pure[IO]
-    override def info(t: Throwable)(message: => String): IO[Unit] = ().pure[IO]
-    override def debug(t: Throwable)(message: => String): IO[Unit] = ().pure[IO]
-    override def trace(t: Throwable)(message: => String): IO[Unit] = ().pure[IO]
-    override def error(message: => String): IO[Unit] = ().pure[IO]
-    override def warn(message: => String): IO[Unit] = ().pure[IO]
-    override def info(message: => String): IO[Unit] = ().pure[IO]
-    override def debug(message: => String): IO[Unit] = ().pure[IO]
-    override def trace(message: => String): IO[Unit] = ().pure[IO]
-}
 val key: PGPPublicKey = ??? // from above
 
 (for {
