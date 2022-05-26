@@ -11,7 +11,7 @@ import org.scalacheck.Arbitrary._
 import org.scalacheck._
 import org.scalacheck.effect.PropF.{forAllF, forAllNoShrinkF}
 import org.scalacheck.util.Pretty
-import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats._
 import org.typelevel.log4cats.noop.NoOpLogger
 import com.eed3si9n.expecty.Expecty.{ assert => Assert }
 
@@ -24,7 +24,10 @@ class CryptoAlgSpec
     with PgpArbitraries
     with CryptoArbitraries {
 
-  private implicit val noOpLogger: Logger[IO] = NoOpLogger[IO]
+  private implicit val noOpLogger: LoggerFactory[IO] = new LoggerFactory[IO] {
+    override def getLoggerFromName(name: String): SelfAwareStructuredLogger[IO] = NoOpLogger[IO]
+    override def fromName(name: String): IO[SelfAwareStructuredLogger[IO]] = NoOpLogger[IO].pure[IO]
+  }
 
   private val resource: Fixture[CryptoAlg[IO]] = ResourceSuiteLocalFixture("CryptoAlg[IO]", CryptoAlg[IO])
   override def munitFixtures = List(resource)

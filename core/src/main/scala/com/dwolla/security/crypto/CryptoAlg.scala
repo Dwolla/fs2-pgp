@@ -1,6 +1,7 @@
 package com.dwolla.security.crypto
 
 import cats.effect._
+import cats.effect.syntax.all._
 import cats.syntax.all._
 import com.dwolla.security.crypto.Compression._
 import com.dwolla.security.crypto.Encryption._
@@ -11,7 +12,7 @@ import fs2.io.{readInputStream, readOutputStream, toInputStream, writeOutputStre
 import org.bouncycastle.bcpg._
 import org.bouncycastle.openpgp._
 import org.bouncycastle.openpgp.operator.jcajce._
-import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.{Logger, LoggerFactory, LoggerName}
 
 import java.io._
 
@@ -114,7 +115,15 @@ object CryptoAlg extends CryptoAlgPlatform {
         } yield literalizer
       }
 
-  override def apply[F[_] : Async : Logger]: Resource[F, CryptoAlg[F]] =
+  def apply[F[_] : Async : LoggerFactory](implicit loggerName: LoggerName = LoggerName("com.dwolla.security.crypto.CryptoAlg")): Resource[F, CryptoAlg[F]] =
+    LoggerFactory[F]
+      .create
+      .toResource
+      .flatMap { implicit logger =>
+        CryptoAlg.withLogger[F]
+      }
+
+  def withLogger[F[_] : Async : Logger]: Resource[F, CryptoAlg[F]] =
     for {
       _ <- BouncyCastleResource[F]
     } yield new CryptoAlg[F] {
@@ -232,9 +241,13 @@ object CryptoAlg extends CryptoAlgPlatform {
             .drain
         }
     }
+
+  @deprecated("use the variant with LoggerFactory instead", "0.4.0")
+  override def apply[F[_]](F: Async[F], L: Logger[F]): Resource[F, CryptoAlg[F]] = CryptoAlg.withLogger[F](F, L)
 }
 
 // only kept to maintain binary compatibility
 trait CryptoAlgPlatform {
-  private[crypto] def apply[F[_] : Async : Logger]: Resource[F, CryptoAlg[F]] = CryptoAlg[F]
+  @deprecated("use the variant with LoggerFactory instead", "0.4.0")
+  private[crypto] def apply[F[_]](ev1: Async[F], ev2: Logger[F]): Resource[F, CryptoAlg[F]] = CryptoAlg.withLogger[F](ev1, ev2)
 }
