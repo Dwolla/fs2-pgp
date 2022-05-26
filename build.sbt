@@ -2,7 +2,7 @@ lazy val V = new {
   val SCALA_2_12 = "2.12.15"
   val SCALA_2_13 = "2.13.8"
   val Scalas = Seq(SCALA_2_13, SCALA_2_12)
-  val bouncyCastle = "1.70"
+  val bouncyCastle = "1.71"
   val refined = "0.9.29"
   val shapeless = "2.3.9"
   val catsScalacheck = "0.3.0"
@@ -75,8 +75,8 @@ lazy val `fs2-pgp` = (project in file("core"))
         "org.typelevel" %% "cats-core" % V.cats,
         "org.typelevel" %% "cats-effect-kernel" % V.catsEffect,
         "org.typelevel" %% "cats-effect" % V.catsEffect,
-        "org.bouncycastle" % "bcpg-jdk15on" % V.bouncyCastle,
-        "org.bouncycastle" % "bcprov-jdk15on" % V.bouncyCastle,
+        "org.bouncycastle" % "bcpg-jdk18on" % V.bouncyCastle,
+        "org.bouncycastle" % "bcprov-jdk18on" % V.bouncyCastle,
         "co.fs2" %% "fs2-core" % V.fs2,
         "co.fs2" %% "fs2-io" % V.fs2,
         "com.chuusai" %% "shapeless" % V.shapeless,
@@ -116,8 +116,8 @@ lazy val `pgp-testkit` = (project in file("testkit"))
     description := "Scalacheck Arbitraries for PGP resources",
     libraryDependencies ++= {
       Seq(
-        "org.bouncycastle" % "bcpg-jdk15on" % V.bouncyCastle,
-        "org.bouncycastle" % "bcprov-jdk15on" % V.bouncyCastle % Runtime,
+        "org.bouncycastle" % "bcpg-jdk18on" % V.bouncyCastle,
+        "org.bouncycastle" % "bcprov-jdk18on" % V.bouncyCastle,
         "org.scalacheck" %% "scalacheck" % "1.16.0",
         "org.typelevel" %% "cats-core" % V.cats,
         "org.typelevel" %% "cats-effect-kernel" % V.catsEffect,
