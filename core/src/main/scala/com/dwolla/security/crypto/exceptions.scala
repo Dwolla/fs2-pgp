@@ -1,9 +1,11 @@
 package com.dwolla.security.crypto
 
-case class KeyRingMissingKeyException(expectedKeyId: Long)
-  extends RuntimeException(s"Cannot decrypt message with the passed keyring because it requires key $expectedKeyId, but the ring does not contain that key", null, true, false)
+import scala.util.control.NoStackTrace
 
-case class KeyMismatchException(expectedKeyId: Long, actualKeyId: Long)
-  extends RuntimeException(s"Cannot decrypt message with key $actualKeyId because it requires key $expectedKeyId", null, true, false)
+case class KeyRingMissingKeyException(expectedKeyId: Option[Long])
+  extends RuntimeException(s"Cannot decrypt message with the passed keyring because ${expectedKeyId.fold("it does not contain a compatible key and the message recipient is hidden")(id => s"it requires key $id, but the ring does not contain that key")}") with NoStackTrace
 
-case object EncryptionTypeError extends RuntimeException("encrypted data was not PGPPublicKeyEncryptedData", null, true, false)
+case class KeyMismatchException(expectedKeyId: Option[Long], actualKeyId: Long)
+  extends RuntimeException(s"Cannot decrypt message with key $actualKeyId${expectedKeyId.fold(". (The message recipient is hidden.)")(id => s" because it requires key $id")}") with NoStackTrace
+
+case object EncryptionTypeError extends RuntimeException("encrypted data was not PGPPublicKeyEncryptedData") with NoStackTrace

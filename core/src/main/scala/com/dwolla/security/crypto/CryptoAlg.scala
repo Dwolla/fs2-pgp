@@ -4,6 +4,7 @@ import cats.effect._
 import cats.effect.syntax.all._
 import cats.syntax.all._
 import com.dwolla.security.crypto.Compression._
+import com.dwolla.security.crypto.DecryptToInputStream._
 import com.dwolla.security.crypto.Encryption._
 import com.dwolla.security.crypto.PgpLiteralDataPacketFormat._
 import eu.timepit.refined.auto._
@@ -153,8 +154,8 @@ object CryptoAlg extends CryptoAlgPlatform {
 
       private val objectIteratorChunkSize: ChunkSize = tagChunkSize(1)
 
-      private def pgpInputStreamToByteStream[A : CanCreateDecryptorFactory[F, *]](keylike: A,
-                                                                                  chunkSize: ChunkSize): InputStream => Stream[F, Byte] = {
+      private def pgpInputStreamToByteStream[A: DecryptToInputStream[F, *]](keylike: A,
+                                                                            chunkSize: ChunkSize): InputStream => Stream[F, Byte] = {
         def pgpCompressedDataToBytes(pcd: PGPCompressedData): Stream[F, Byte] =
           Logger[Stream[F, *]].trace("Found compressed data") >>
             pgpInputStreamToByteStream(keylike, chunkSize).apply(pcd.getDataStream)
@@ -172,13 +173,17 @@ object CryptoAlg extends CryptoAlgPlatform {
             Stream.fromBlockingIterator[F](pedl.iterator().asScala, objectIteratorChunkSize)
               .evalMap {
                 case pbe: PGPPublicKeyEncryptedData =>
-                  CanCreateDecryptorFactory[F, A]
-                    .publicKeyDataDecryptorFactory(keylike, pbe.getKeyID)
-                    .flatMap(factory => Sync[F].blocking(pbe.getDataStream(factory)))
+                  // a key ID of 0L indicates a "hidden" recipient,
+                  // and we can't use that key ID to lookup the key
+                  val recipientKeyId = Option(pbe.getKeyID).filterNot(_ == 0)
+
+                  pbe.decryptToInputStream(keylike, recipientKeyId)
+
                 case other =>
                   Logger[F].error(EncryptionTypeError)(s"found wrong type of encrypted data: $other") >>
                     EncryptionTypeError.raiseError[F, InputStream]
               }
+              .head // TODO what happens if pedl contains multiple recipients?
               .flatMap(pgpInputStreamToByteStream(keylike, chunkSize))
         }
 
