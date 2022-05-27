@@ -4,6 +4,7 @@ import cats._
 import cats.effect._
 import cats.syntax.all._
 import com.dwolla.security.crypto.BouncyCastleResource
+import com.dwolla.testutils.PgpArbitraries.KeySize
 import eu.timepit.refined.W
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.auto._
@@ -17,31 +18,31 @@ import org.scalacheck._
 import java.security.KeyPairGenerator
 import java.util.Date
 
-trait PgpArbitraries {
+trait PgpArbitraries extends PgpArbitrariesPlatform {
   type KeySizePred = GreaterEqual[W.`384`.T]
   type KeySize = Int Refined KeySizePred
 
-  implicit def arbPgpPublicKey[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Arbitrary[Resource[F, PGPPublicKey]] = Arbitrary {
+  override implicit def arbPgpPublicKey[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Arbitrary[Resource[F, PGPPublicKey]] = Arbitrary {
     arbitrary[Resource[F, PGPKeyPair]].map(_.map(_.getPublicKey))
   }
 
-  implicit def arbPgpPrivateKey[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Arbitrary[Resource[F, PGPPrivateKey]] = Arbitrary {
+  override implicit def arbPgpPrivateKey[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Arbitrary[Resource[F, PGPPrivateKey]] = Arbitrary {
     arbitrary[Resource[F, PGPKeyPair]].map(_.map(_.getPrivateKey))
   }
 
-  def genStrongKeyPair[F[_] : Sync]: Gen[Resource[F, PGPKeyPair]] =
+  override def genStrongKeyPair[F[_] : Sync]: Gen[Resource[F, PGPKeyPair]] =
     for {
       keySize <- Gen.oneOf[KeySize](2048, 4096)
       keyPair <- genKeyPair[F](keySize)
     } yield keyPair
 
-  def arbWeakKeyPair[F[_] : Sync]: Arbitrary[Resource[F, PGPKeyPair]] =
+  override def arbWeakKeyPair[F[_] : Sync]: Arbitrary[Resource[F, PGPKeyPair]] =
     Arbitrary(genWeakKeyPair)
 
-  def genWeakKeyPair[F[_] : Sync]: Gen[Resource[F, PGPKeyPair]] =
+  override def genWeakKeyPair[F[_] : Sync]: Gen[Resource[F, PGPKeyPair]] =
     genKeyPair[F](512)
 
-  def genKeyPair[F[_] : Sync](keySize: KeySize): Gen[Resource[F, PGPKeyPair]] =
+  override def genKeyPair[F[_] : Sync](keySize: KeySize): Gen[Resource[F, PGPKeyPair]] =
     BouncyCastleResource[F]
       .evalMap { _ =>
         for {
@@ -62,3 +63,13 @@ trait PgpArbitraries {
 }
 
 object PgpArbitraries extends PgpArbitraries
+
+// only kept to maintain binary compatibility
+trait PgpArbitrariesPlatform {
+  private[testutils] def arbPgpPublicKey[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Arbitrary[Resource[F, PGPPublicKey]] = PgpArbitraries.arbPgpPublicKey
+  private[testutils] def arbPgpPrivateKey[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Arbitrary[Resource[F, PGPPrivateKey]] = PgpArbitraries.arbPgpPrivateKey
+  private[testutils] def genStrongKeyPair[F[_] : Sync]: Gen[Resource[F, PGPKeyPair]] = PgpArbitraries.genStrongKeyPair
+  private[testutils] def arbWeakKeyPair[F[_] : Sync]: Arbitrary[Resource[F, PGPKeyPair]] = PgpArbitraries.arbWeakKeyPair
+  private[testutils] def genWeakKeyPair[F[_] : Sync]: Gen[Resource[F, PGPKeyPair]] = PgpArbitraries.genWeakKeyPair
+  private[testutils] def genKeyPair[F[_] : Sync](keySize: KeySize): Gen[Resource[F, PGPKeyPair]] = PgpArbitraries.genKeyPair(keySize)
+}

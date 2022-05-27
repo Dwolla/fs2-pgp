@@ -65,7 +65,7 @@ trait CryptoAlg[F[_]] {
 
 }
 
-object CryptoAlg {
+object CryptoAlg extends CryptoAlgPlatform {
   private def addKey[F[_] : Sync](pgpEncryptedDataGenerator: PGPEncryptedDataGenerator, key: PGPPublicKey): F[Unit] =
     Sync[F].blocking(pgpEncryptedDataGenerator.addMethod(new JcePublicKeyKeyEncryptionMethodGenerator(key)))
 
@@ -114,7 +114,7 @@ object CryptoAlg {
         } yield literalizer
       }
 
-  def apply[F[_] : Async : Logger]: Resource[F, CryptoAlg[F]] =
+  override def apply[F[_] : Async : Logger]: Resource[F, CryptoAlg[F]] =
     for {
       _ <- BouncyCastleResource[F]
     } yield new CryptoAlg[F] {
@@ -232,4 +232,9 @@ object CryptoAlg {
             .drain
         }
     }
+}
+
+// only kept to maintain binary compatibility
+trait CryptoAlgPlatform {
+  private[crypto] def apply[F[_] : Async : Logger]: Resource[F, CryptoAlg[F]] = CryptoAlg[F]
 }
