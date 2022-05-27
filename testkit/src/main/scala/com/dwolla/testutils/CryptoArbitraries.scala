@@ -18,7 +18,7 @@ import org.scalacheck.cats.implicits._
 
 import scala.jdk.CollectionConverters._
 
-trait CryptoArbitraries { self: PgpArbitraries =>
+trait CryptoArbitraries extends CryptoArbitrariesPlatform { self: PgpArbitraries =>
   def genNBytesBetween(min: Int, max: Int): Gen[Stream[Pure, Byte]] =
     for {
       count <- Gen.chooseNum(min, Math.max(min, max))
@@ -33,15 +33,15 @@ trait CryptoArbitraries { self: PgpArbitraries =>
     chooseRefinedNum[Refined, Int, Positive](1024, 4096).map(tagChunkSize)
   }
 
-  def genPgpBytes[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Gen[Resource[F, Array[Byte]]] =
+  override def genPgpBytes[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Gen[Resource[F, Array[Byte]]] =
     for {
       keyPair <- arbitrary[Resource[F, PGPKeyPair]]
       bytes <- Gen.oneOf[Resource[F, Array[Byte]]](keyPair.map(_.getPublicKey.getEncoded), keyPair.map(_.getPrivateKey.getPrivateKeyDataPacket.getEncoded))
     } yield bytes
 
-  def pgpKeyRingGenerator[F[_] : Sync](keyRingId: String,
-                                       keyPair: PGPKeyPair,
-                                       passphrase: Array[Char]): F[PGPKeyRingGenerator] =
+  override def pgpKeyRingGenerator[F[_] : Sync](keyRingId: String,
+                                                keyPair: PGPKeyPair,
+                                                passphrase: Array[Char]): F[PGPKeyRingGenerator] =
     Sync[F].blocking {
       val pgpContentSignerBuilder: PGPContentSignerBuilder = new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA1)
       //      val pgpContentSignerBuilder: PGPContentSignerBuilder = new BcPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA1)
@@ -61,8 +61,8 @@ trait CryptoArbitraries { self: PgpArbitraries =>
       )
     }
 
-  def genPGPSecretKeyRingCollection[F[_] : Sync](passphrase: Array[Char])
-                                                (implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Gen[Resource[F, PGPSecretKeyRingCollection]] =
+  override def genPGPSecretKeyRingCollection[F[_] : Sync](passphrase: Array[Char])
+                                                         (implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Gen[Resource[F, PGPSecretKeyRingCollection]] =
     (arbitrary[Resource[F, PGPKeyPair]], arbitrary[String]).mapN { (keyPairR, keyRingId) =>
       for {
         kp <- keyPairR
@@ -71,9 +71,29 @@ trait CryptoArbitraries { self: PgpArbitraries =>
       } yield new PGPSecretKeyRingCollection(List(collection).asJava)
     }
 
-  def keysIn[F[_] : Sync](collection: PGPSecretKeyRingCollection): Stream[F, PGPSecretKey] =
+  override def keysIn[F[_] : Sync](collection: PGPSecretKeyRingCollection): Stream[F, PGPSecretKey] =
     for {
       ring <- Stream.fromBlockingIterator[F](collection.iterator().asScala, 1)
       key <- Stream.fromBlockingIterator[F](ring.iterator().asScala, 1)
     } yield key
+}
+
+object CryptoArbitraries extends CryptoArbitraries with PgpArbitraries
+
+// only kept to maintain binary compatibility
+trait CryptoArbitrariesPlatform {
+  private[testutils] def genPgpBytes[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Gen[Resource[F, Array[Byte]]] =
+    CryptoArbitraries.genPgpBytes
+
+  private[testutils] def pgpKeyRingGenerator[F[_] : Sync](keyRingId: String,
+                                                          keyPair: PGPKeyPair,
+                                                          passphrase: Array[Char]): F[PGPKeyRingGenerator] =
+    CryptoArbitraries.pgpKeyRingGenerator(keyRingId, keyPair, passphrase)
+
+  private[testutils] def genPGPSecretKeyRingCollection[F[_] : Sync](passphrase: Array[Char])
+                                                                   (implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Gen[Resource[F, PGPSecretKeyRingCollection]] =
+    CryptoArbitraries.genPGPSecretKeyRingCollection(passphrase)
+
+  private[testutils] def keysIn[F[_] : Sync](collection: PGPSecretKeyRingCollection): Stream[F, PGPSecretKey] =
+    CryptoArbitraries.keysIn(collection)
 }

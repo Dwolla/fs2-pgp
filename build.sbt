@@ -47,7 +47,7 @@ ThisBuild / githubWorkflowPublish := Seq(
     )
   )
 )
-ThisBuild / localMimaPreviousVersions := Set.empty // TODO once 0.4.0 is published, add it here
+ThisBuild / localMimaPreviousVersions := Set("0.3.0")
 
 lazy val commonSettings = Seq(
   addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.13.2" cross CrossVersion.full),

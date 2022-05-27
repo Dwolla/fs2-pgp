@@ -16,8 +16,10 @@ trait PGPKeyAlg[F[_]] {
   def readSecretKeyCollection(keys: String): F[PGPSecretKeyRingCollection]
 }
 
-object PGPKeyAlg {
-  def apply[F[_] : Async]: PGPKeyAlg[F] = new PGPKeyAlg[F] {
+object PGPKeyAlg extends PGPKeyAlgPlatform {
+  private val keyChunkSize: Int = 1
+
+  override def apply[F[_] : Async]: PGPKeyAlg[F] = new PGPKeyAlg[F] {
     import scala.jdk.CollectionConverters._
 
     override def readPublicKey(key: String): F[PGPPublicKey] =
@@ -78,6 +80,11 @@ object PGPKeyAlg {
         secretKey <- Stream.fromBlockingIterator[F](keyRing.getSecretKeys.asScala, keyChunkSize)
       } yield secretKey
   }
-
-  private[PGPKeyAlg] val keyChunkSize: Int = 1
 }
+
+// only kept to maintain binary compatibility
+trait PGPKeyAlgPlatform {
+  private[crypto] def apply[F[_] : Async]: PGPKeyAlg[F] = PGPKeyAlg[F]
+}
+
+object PGPKeyAlgPlatform
