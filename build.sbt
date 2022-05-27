@@ -31,6 +31,7 @@ ThisBuild / developers := List(
     url("https://dwolla.com")
   )
 )
+ThisBuild / githubWorkflowBuild := Seq(WorkflowStep.Sbt(List("test", "mimaReportBinaryIssues", "doc")))
 ThisBuild / githubWorkflowTargetTags ++= Seq("v*")
 ThisBuild / githubWorkflowPublishTargetBranches :=
   Seq(RefPredicate.StartsWith(Ref.Tag("v")))
@@ -46,6 +47,7 @@ ThisBuild / githubWorkflowPublish := Seq(
     )
   )
 )
+ThisBuild / localMimaPreviousVersions := Set.empty // TODO once 0.4.0 is published, add it here
 
 lazy val commonSettings = Seq(
   addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.13.2" cross CrossVersion.full),
@@ -103,7 +105,7 @@ lazy val tests = (project in file("tests"))
         "com.eed3si9n.expecty" %% "expecty" % V.expecty % Test,
       )
     },
-    publish / skip := true,
+    publishArtifact := false,
   )
   .dependsOn(`fs2-pgp`, `pgp-testkit`)
   .settings(commonSettings: _*)
@@ -134,7 +136,7 @@ lazy val `pgp-testkit` = (project in file("testkit"))
   .settings(commonSettings: _*)
 
 lazy val `fs2-pgp-root` = (project in file("."))
-  .settings(publish / skip := true)
+  .settings(publishArtifact := false)
   .aggregate(
     `fs2-pgp`,
     tests,
