@@ -199,6 +199,174 @@ class CryptoAlgSpec
     }
   }
 
+  /*
+   * Steps to generate cryptotext on macOS, having copied the test key to the clipboard:
+   *
+   *  > export GNUPGHOME="$(mktemp -d)/.gnupg"
+   *  > mkdir -m 0700 -p "${GNUPGHOME}"
+   *  > pbpaste | gpg --import
+   *  > echo "Hello World" | gpg --encrypt --armor --hidden-recipient "key 1 <key1@dwolla.com>"
+   */
+  test("CryptoAlg should decrypt cryptotext with a hidden recipient using secret key collection") {
+    val crypto = resource()
+
+    val message =
+      """-----BEGIN PGP MESSAGE-----
+        |
+        |hQGMAwAAAAAAAAAAAQv/QQ8RnRGF6jaPTUpuBoPollIBvPIzqokTGzuTaVD4bKsg
+        |GGt4ooPpcTkxn0MRLs3rNJfZjaULSkWtUxc4NsSbqmrl8g3smnwJWk/UIR097zlC
+        |s30/o3WlmSodAGbEuP5Y+mbAErwGbCs1e7cn1LqQO3BrSZ3m7djif9fiWRdb3AZ4
+        |YPX5dmmOZLZoNQO5zLNu3iolrTXyimQLcS7VoFQ+Nbj9hOS+vDzcg6Kycaky7U+M
+        |arfyyaqWan8hVygDthMT+n3Au0l7lBzN99aZmC13OP2fhuBBXvrGF+njFS+RkEOs
+        |LToMlpFVYWlEFSnYlIQjsxKBzMKThNudKM7r4Kc1yw88DQ9C/rWZxmMxTyLAA4C7
+        |QZKdO+zYfzSCYq3bO+YdN8vUGZPS63YN8Pp6qWvIXOZ3oecxmidqjGsItLpxJ0KK
+        |zJ0IWVsQj1Zc/2zSojw8edcMh86PFbQsC4aPpMK54KiU4YKXcUnaDeQ48BGv27Po
+        |Qx9PqZi+1ROo+anCVWrn0kcB/+g0TzSpG+nwMI4gxNTTAuybzEscK2ifkA76Df45
+        |cSypFoj4OIRtTZ8iSGhfgt0fCn1qUrEs7Vw+iNYSqpl9/ue3u1icCQ==
+        |=kHjl
+        |-----END PGP MESSAGE-----
+        |""".stripMargin
+
+    for {
+      key <- PGPKeyAlg[IO].readSecretKeyCollection(TestKey())
+      text <- Stream
+        .emit(message)
+        .through(text.utf8.encode)
+        .through(crypto.decrypt(key))
+        .through(text.utf8.decode)
+        .compile
+        .lastOrError
+    } yield {
+      assertEquals(text, "Hello World\n")
+    }
+  }
+
+  /*
+   * Steps to generate cryptotext on macOS, having copied the test key to the clipboard:
+   *
+   *  > export GNUPGHOME="$(mktemp -d)/.gnupg"
+   *  > mkdir -m 0700 -p "${GNUPGHOME}"
+   *  > pbpaste | gpg --import
+   *  > echo "Hello World" | gpg --encrypt --armor --recipient "key 1 <key1@dwolla.com>"
+   */
+  test("CryptoAlg should decrypt cryptotext with a known recipient using secret key collection") {
+    val crypto = resource()
+
+    val message =
+      """-----BEGIN PGP MESSAGE-----
+        |
+        |hQGMA1TkhEz+fGjhAQwAmJa5ZefcoKp0xp2AyPf1W/cPb/L7qwohnxiwjOmOZOWx
+        |APAbFWbqqMCUqoFqWIE3Uo1k2xfBe+gy3lZzEpaNcWqo5cNcFRajZCpC4Jh5AWKZ
+        |z3wTzlmKoO+JRi7PshuPbGeiYNRYiayfc2L9bQFB2zFx/99Q542oQmRo/dFtjpNQ
+        |rROUmGmhuZTFKFoCa8EQlglOu0tUH4pn79mA3POwiYKSO+nySOXlciOUzofauVKz
+        |mv0YzEapgmGUSMH7itNa3OWpYuip0EVeg4juoY1Qm0ae+AHV1mGcTn/k5vT4r55Z
+        |0yyzRhACb5lnS2OllNVcjV9LkQ8PdosEKGfLDHniF/OaAj7KF79N9CqwMAA1ng1J
+        |3oHj3oJcxPEtrccgkGErtQJvrC0UENQGDZS171DXmYKSyiP0W+GU26oeDo5L7vug
+        |61LcAL4fKkj6PWkLu/iFoWStnPdI2prqJ4fUGGmYyiTf8sL/HD1Zmj+wgbd4svUo
+        |Jlmzgr/sl2FC0avgYnFi0kcBGfqqvZ8D2QSIk+1xmOckKc3MBRYboDYHlaKYecit
+        |cWo+Lvh6NbHbJcfDjewdJe2A7FKm6YGZUVhOvZEC1Lf2fQ/A++ZGZg==
+        |=TVjb
+        |-----END PGP MESSAGE-----
+        |""".stripMargin
+
+    for {
+      key <- PGPKeyAlg[IO].readSecretKeyCollection(TestKey())
+      text <- Stream
+        .emit(message)
+        .through(text.utf8.encode)
+        .through(crypto.decrypt(key))
+        .through(text.utf8.decode)
+        .compile
+        .lastOrError
+    } yield {
+      assertEquals(text, "Hello World\n")
+    }
+  }
+
+  /*
+   * Steps to generate cryptotext on macOS, having copied the test key to the clipboard:
+   *
+   *  > export GNUPGHOME="$(mktemp -d)/.gnupg"
+   *  > mkdir -m 0700 -p "${GNUPGHOME}"
+   *  > pbpaste | gpg --import
+   *  > echo "Hello World" | gpg --encrypt --armor --hidden-recipient "key 1 <key1@dwolla.com>"
+   */
+  test("CryptoAlg should decrypt cryptotext with a hidden recipient using private key") {
+    val crypto = resource()
+
+    val message =
+      """-----BEGIN PGP MESSAGE-----
+        |
+        |hQGMAwAAAAAAAAAAAQv/QQ8RnRGF6jaPTUpuBoPollIBvPIzqokTGzuTaVD4bKsg
+        |GGt4ooPpcTkxn0MRLs3rNJfZjaULSkWtUxc4NsSbqmrl8g3smnwJWk/UIR097zlC
+        |s30/o3WlmSodAGbEuP5Y+mbAErwGbCs1e7cn1LqQO3BrSZ3m7djif9fiWRdb3AZ4
+        |YPX5dmmOZLZoNQO5zLNu3iolrTXyimQLcS7VoFQ+Nbj9hOS+vDzcg6Kycaky7U+M
+        |arfyyaqWan8hVygDthMT+n3Au0l7lBzN99aZmC13OP2fhuBBXvrGF+njFS+RkEOs
+        |LToMlpFVYWlEFSnYlIQjsxKBzMKThNudKM7r4Kc1yw88DQ9C/rWZxmMxTyLAA4C7
+        |QZKdO+zYfzSCYq3bO+YdN8vUGZPS63YN8Pp6qWvIXOZ3oecxmidqjGsItLpxJ0KK
+        |zJ0IWVsQj1Zc/2zSojw8edcMh86PFbQsC4aPpMK54KiU4YKXcUnaDeQ48BGv27Po
+        |Qx9PqZi+1ROo+anCVWrn0kcB/+g0TzSpG+nwMI4gxNTTAuybzEscK2ifkA76Df45
+        |cSypFoj4OIRtTZ8iSGhfgt0fCn1qUrEs7Vw+iNYSqpl9/ue3u1icCQ==
+        |=kHjl
+        |-----END PGP MESSAGE-----
+        |""".stripMargin
+
+    for {
+      key <- PGPKeyAlg[IO].readPrivateKey(TestKey.privateSubKey)
+      text <- Stream
+        .emit(message)
+        .through(text.utf8.encode)
+        .through(crypto.decrypt(key))
+        .through(text.utf8.decode)
+        .compile
+        .lastOrError
+    } yield {
+      assertEquals(text, "Hello World\n")
+    }
+  }
+
+  /*
+   * Steps to generate cryptotext on macOS, having copied the test key to the clipboard:
+   *
+   *  > export GNUPGHOME="$(mktemp -d)/.gnupg"
+   *  > mkdir -m 0700 -p "${GNUPGHOME}"
+   *  > pbpaste | gpg --import
+   *  > echo "Hello World" | gpg --encrypt --armor --recipient "key 1 <key1@dwolla.com>"
+   */
+  test("CryptoAlg should decrypt cryptotext with a known recipient using private key") {
+    val crypto = resource()
+
+    val message =
+      """-----BEGIN PGP MESSAGE-----
+        |
+        |hQGMA1TkhEz+fGjhAQwAmJa5ZefcoKp0xp2AyPf1W/cPb/L7qwohnxiwjOmOZOWx
+        |APAbFWbqqMCUqoFqWIE3Uo1k2xfBe+gy3lZzEpaNcWqo5cNcFRajZCpC4Jh5AWKZ
+        |z3wTzlmKoO+JRi7PshuPbGeiYNRYiayfc2L9bQFB2zFx/99Q542oQmRo/dFtjpNQ
+        |rROUmGmhuZTFKFoCa8EQlglOu0tUH4pn79mA3POwiYKSO+nySOXlciOUzofauVKz
+        |mv0YzEapgmGUSMH7itNa3OWpYuip0EVeg4juoY1Qm0ae+AHV1mGcTn/k5vT4r55Z
+        |0yyzRhACb5lnS2OllNVcjV9LkQ8PdosEKGfLDHniF/OaAj7KF79N9CqwMAA1ng1J
+        |3oHj3oJcxPEtrccgkGErtQJvrC0UENQGDZS171DXmYKSyiP0W+GU26oeDo5L7vug
+        |61LcAL4fKkj6PWkLu/iFoWStnPdI2prqJ4fUGGmYyiTf8sL/HD1Zmj+wgbd4svUo
+        |Jlmzgr/sl2FC0avgYnFi0kcBGfqqvZ8D2QSIk+1xmOckKc3MBRYboDYHlaKYecit
+        |cWo+Lvh6NbHbJcfDjewdJe2A7FKm6YGZUVhOvZEC1Lf2fQ/A++ZGZg==
+        |=TVjb
+        |-----END PGP MESSAGE-----
+        |""".stripMargin
+
+    for {
+      key <- PGPKeyAlg[IO].readPrivateKey(TestKey.privateSubKey)
+      text <- Stream
+        .emit(message)
+        .through(text.utf8.encode)
+        .through(crypto.decrypt(key))
+        .through(text.utf8.decode)
+        .compile
+        .lastOrError
+    } yield {
+      assertEquals(text, "Hello World\n")
+    }
+  }
+
   private implicit def prettyArrayChar: Array[Char] => Pretty = arr => Pretty { _ =>
     arr.toList.map("'" + _ + "'").mkString("Array(", ", ", ")")
   }

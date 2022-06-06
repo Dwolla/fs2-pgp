@@ -86,6 +86,15 @@ lazy val `fs2-pgp` = (project in file("core"))
       )
     },
     unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),
+    mimaBinaryIssueFilters ++= {
+      import com.typesafe.tools.mima.core._
+      Seq(
+        // the CanCreateDecryptorFactory filters ignore a class and companion object that should have been package private
+        // and have been replaced with an alternative implementation that is package private
+        ProblemFilters.exclude[MissingClassProblem]("com.dwolla.security.crypto.CanCreateDecryptorFactory"),
+        ProblemFilters.exclude[MissingClassProblem]("com.dwolla.security.crypto.CanCreateDecryptorFactory$"),
+      )
+    },
   )
   .settings(commonSettings: _*)
 
