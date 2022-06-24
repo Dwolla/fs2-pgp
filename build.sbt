@@ -14,7 +14,7 @@ lazy val V = new {
   val cats = "2.7.0"
   val catsEffect = "3.2.3"
   val fs2 = "3.1.0"
-  val log4cats = "2.3.1"
+  val log4cats = "2.3.2"
 }
 
 ThisBuild / scalaVersion := V.Scalas.head
