@@ -1,9 +1,9 @@
 lazy val V = new {
-  val SCALA_2_12 = "2.12.15"
+  val SCALA_2_12 = "2.12.16"
   val SCALA_2_13 = "2.13.8"
   val Scalas = Seq(SCALA_2_13, SCALA_2_12)
   val bouncyCastle = "1.71"
-  val refined = "0.9.29"
+  val refined = "0.10.0"
   val shapeless = "2.3.9"
   val catsScalacheck = "0.3.1"
   val scalaCollectionCompat = "2.7.0"
@@ -11,9 +11,9 @@ lazy val V = new {
   val scalacheckEffect = "1.0.4"
   val munitCatsEffect = "1.0.7"
   val expecty = "0.15.4"
-  val cats = "2.7.0"
+  val cats = "2.8.0"
   val catsEffect = "3.2.9"
-  val fs2 = "3.1.0"
+  val fs2 = "3.2.9"
   val log4cats = "2.3.1"
 }
 
