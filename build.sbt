@@ -31,22 +31,15 @@ ThisBuild / developers := List(
   )
 )
 ThisBuild / githubWorkflowBuild := Seq(WorkflowStep.Sbt(List("test", "mimaReportBinaryIssues", "doc")))
-ThisBuild / githubWorkflowTargetTags ++= Seq("v*")
-ThisBuild / githubWorkflowPublishTargetBranches :=
-  Seq(RefPredicate.StartsWith(Ref.Tag("v")))
-
-ThisBuild / githubWorkflowPublish := Seq(
-  WorkflowStep.Sbt(
-    List("ci-release"),
-    env = Map(
-      "PGP_PASSPHRASE" -> "${{ secrets.PGP_PASSPHRASE }}",
-      "PGP_SECRET" -> "${{ secrets.PGP_SECRET }}",
-      "SONATYPE_PASSWORD" -> "${{ secrets.SONATYPE_PASSWORD }}",
-      "SONATYPE_USERNAME" -> "${{ secrets.SONATYPE_USERNAME }}"
-    )
-  )
-)
-ThisBuild / localMimaPreviousVersions := Set("0.3.0")
+tpolecatScalacOptions += ScalacOptions.release("8")
+ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("17"))
+ThisBuild / githubWorkflowScalaVersions := Seq("2.13", "2.12")
+ThisBuild / tlCiReleaseBranches := Seq("main")
+ThisBuild / tlBaseVersion := "0.4"
+ThisBuild / tlSonatypeUseLegacyHost := true
+ThisBuild / mergifyStewardConfig ~= {
+  _.map(_.copy(mergeMinors = true, author = "dwolla-oss-scala-steward[bot]"))
+}
 
 lazy val commonSettings = Seq(
   addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.13.2" cross CrossVersion.full),
