@@ -18,7 +18,7 @@ import org.scalacheck.cats.implicits._
 
 import scala.jdk.CollectionConverters._
 
-trait CryptoArbitraries extends CryptoArbitrariesPlatform { self: PgpArbitraries =>
+trait CryptoArbitraries { self: PgpArbitraries =>
   def genNBytesBetween(min: Int, max: Int): Gen[Stream[Pure, Byte]] =
     for {
       count <- Gen.chooseNum(min, Math.max(min, max))
@@ -33,13 +33,13 @@ trait CryptoArbitraries extends CryptoArbitrariesPlatform { self: PgpArbitraries
     chooseRefinedNum[Refined, Int, Positive](1024, 4096).map(tagChunkSize)
   }
 
-  override def genPgpBytes[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Gen[Resource[F, Array[Byte]]] =
+  def genPgpBytes[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Gen[Resource[F, Array[Byte]]] =
     for {
       keyPair <- arbitrary[Resource[F, PGPKeyPair]]
       bytes <- Gen.oneOf[Resource[F, Array[Byte]]](keyPair.map(_.getPublicKey.getEncoded), keyPair.map(_.getPrivateKey.getPrivateKeyDataPacket.getEncoded))
     } yield bytes
 
-  override def pgpKeyRingGenerator[F[_] : Sync](keyRingId: String,
+  def pgpKeyRingGenerator[F[_] : Sync](keyRingId: String,
                                                 keyPair: PGPKeyPair,
                                                 passphrase: Array[Char]): F[PGPKeyRingGenerator] =
     Sync[F].blocking {
@@ -61,7 +61,7 @@ trait CryptoArbitraries extends CryptoArbitrariesPlatform { self: PgpArbitraries
       )
     }
 
-  override def genPGPSecretKeyRingCollection[F[_] : Sync](passphrase: Array[Char])
+  def genPGPSecretKeyRingCollection[F[_] : Sync](passphrase: Array[Char])
                                                          (implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Gen[Resource[F, PGPSecretKeyRingCollection]] =
     (arbitrary[Resource[F, PGPKeyPair]], arbitrary[String]).mapN { (keyPairR, keyRingId) =>
       for {
@@ -71,7 +71,7 @@ trait CryptoArbitraries extends CryptoArbitrariesPlatform { self: PgpArbitraries
       } yield new PGPSecretKeyRingCollection(List(collection).asJava)
     }
 
-  override def keysIn[F[_] : Sync](collection: PGPSecretKeyRingCollection): Stream[F, PGPSecretKey] =
+  def keysIn[F[_] : Sync](collection: PGPSecretKeyRingCollection): Stream[F, PGPSecretKey] =
     for {
       ring <- Stream.fromBlockingIterator[F](collection.iterator().asScala, 1)
       key <- Stream.fromBlockingIterator[F](ring.iterator().asScala, 1)
@@ -79,21 +79,3 @@ trait CryptoArbitraries extends CryptoArbitrariesPlatform { self: PgpArbitraries
 }
 
 object CryptoArbitraries extends CryptoArbitraries with PgpArbitraries
-
-// only kept to maintain binary compatibility
-trait CryptoArbitrariesPlatform {
-  private[testutils] def genPgpBytes[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Gen[Resource[F, Array[Byte]]] =
-    CryptoArbitraries.genPgpBytes
-
-  private[testutils] def pgpKeyRingGenerator[F[_] : Sync](keyRingId: String,
-                                                          keyPair: PGPKeyPair,
-                                                          passphrase: Array[Char]): F[PGPKeyRingGenerator] =
-    CryptoArbitraries.pgpKeyRingGenerator(keyRingId, keyPair, passphrase)
-
-  private[testutils] def genPGPSecretKeyRingCollection[F[_] : Sync](passphrase: Array[Char])
-                                                                   (implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Gen[Resource[F, PGPSecretKeyRingCollection]] =
-    CryptoArbitraries.genPGPSecretKeyRingCollection(passphrase)
-
-  private[testutils] def keysIn[F[_] : Sync](collection: PGPSecretKeyRingCollection): Stream[F, PGPSecretKey] =
-    CryptoArbitraries.keysIn(collection)
-}
