@@ -2,7 +2,6 @@ package com.dwolla.security.crypto
 
 import cats.data.NonEmptyList
 import cats.effect._
-import cats.effect.syntax.all._
 import cats.syntax.all._
 import com.dwolla.security.crypto.Compression._
 import com.dwolla.security.crypto.DecryptToInputStream._
@@ -72,7 +71,7 @@ trait CryptoAlg[F[_]] {
 
 }
 
-object CryptoAlg extends CryptoAlgPlatform {
+object CryptoAlg {
   private def addKeys[F[_] : Sync](pgpEncryptedDataGenerator: PGPEncryptedDataGenerator,
                                    keys: NonEmptyList[PGPPublicKey]): F[Unit] =
     keys.traverse_ { key =>
@@ -125,156 +124,141 @@ object CryptoAlg extends CryptoAlgPlatform {
       }
 
   def apply[F[_] : Async : LoggerFactory](implicit loggerName: LoggerName = LoggerName("com.dwolla.security.crypto.CryptoAlg")): Resource[F, CryptoAlg[F]] =
-    LoggerFactory[F]
-      .create
-      .toResource
-      .flatMap { implicit logger =>
-        CryptoAlg.withLogger[F]
-      }
+    BouncyCastleResource[F]
+      .evalMap(_ => LoggerFactory[F].create)
+      .map { implicit logger =>
+        new CryptoAlg[F] {
+          import scala.jdk.CollectionConverters._
 
-  def withLogger[F[_] : Async : Logger]: Resource[F, CryptoAlg[F]] =
-    for {
-      _ <- BouncyCastleResource[F]
-    } yield new CryptoAlg[F] {
-      import scala.jdk.CollectionConverters._
+          private implicit val SLogger: Logger[Stream[F, *]] = Logger[F].mapK(Stream.functionKInstance[F])
 
-      private implicit val SLogger: Logger[Stream[F, *]] = Logger[F].mapK(Stream.functionKInstance[F])
+          private val fingerprintCalculator = new JcaKeyFingerprintCalculator
+          private val closeStreamsAfterUse = false
 
-      private val fingerprintCalculator = new JcaKeyFingerprintCalculator
-      private val closeStreamsAfterUse = false
+          override def encrypt(keys: NonEmptyList[PGPPublicKey], config: EncryptionConfig): Pipe[F, Byte, Byte] =
+            _.through { bytes =>
+              readOutputStream(config.chunkSize.value) { outputStreamToRead =>
+                Logger[F].trace(s"${List.fill(keys.length)("🔑").mkString("")} encrypting input with ${keys.length} recipients") >>
+                  Stream
+                    .resource(encryptingOutputStream[F](keys, config.chunkSize, config.fileName, config.encryption, config.compression, config.packetFormat, outputStreamToRead))
+                    .flatMap(wos => bytes.chunkN(config.chunkSize.value).flatMap(Stream.chunk).through(writeOutputStream(wos.pure[F], closeStreamsAfterUse)))
+                    .compile
+                    .drain
+              }
+            }
 
-      override def encrypt(keys: NonEmptyList[PGPPublicKey], config: EncryptionConfig): Pipe[F, Byte, Byte] =
-        _.through { bytes =>
-          readOutputStream(config.chunkSize.value) { outputStreamToRead =>
-            Logger[F].trace(s"${List.fill(keys.length)("🔑").mkString("")} encrypting input with ${keys.length} recipients") >>
-              Stream
-                .resource(encryptingOutputStream[F](keys, config.chunkSize, config.fileName, config.encryption, config.compression, config.packetFormat, outputStreamToRead))
-                .flatMap(wos => bytes.chunkN(config.chunkSize.value).flatMap(Stream.chunk).through(writeOutputStream(wos.pure[F], closeStreamsAfterUse)))
+          private val objectIteratorChunkSize: ChunkSize = tagChunkSize(1)
+
+          private def pgpInputStreamToByteStream[A: DecryptToInputStream[F, *]](keylike: A,
+                                                                                chunkSize: ChunkSize): InputStream => Stream[F, Byte] = {
+            def pgpCompressedDataToBytes(pcd: PGPCompressedData): Stream[F, Byte] =
+              Logger[Stream[F, *]].trace("Found compressed data") >>
+                pgpInputStreamToByteStream(keylike, chunkSize).apply(pcd.getDataStream)
+
+            /*
+             * Literal data is not to be further processed, so its contents
+             * are the bytes to be read and output.
+             */
+            def pgpLiteralDataToBytes(pld: PGPLiteralData): Stream[F, Byte] =
+              Logger[Stream[F, *]].trace(s"found literal data for file: ${pld.getFileName} and format: ${pld.getFormat}") >>
+                readInputStream(Sync[F].blocking(pld.getDataStream), chunkSize.value)
+
+            def pgpEncryptedDataListToBytes(pedl: PGPEncryptedDataList): Stream[F, Byte] = {
+              Logger[Stream[F, *]].trace(s"found ${pedl.size()} encrypted data packets") >>
+                Stream.fromBlockingIterator[F](pedl.iterator().asScala, objectIteratorChunkSize)
+                  .evalMap[F, Option[InputStream]] {
+                    case pbe: PGPPublicKeyEncryptedData =>
+                      // a key ID of 0L indicates a "hidden" recipient,
+                      // and we can't use that key ID to lookup the key
+                      val recipientKeyId = Option(pbe.getKeyID).filterNot(_ == 0)
+
+                      // if the recipient is identified, check if it exists in the key material we have
+                      // if it does, or if the recipient is undefined, try to decrypt.
+                      if (recipientKeyId.exists(DecryptToInputStream[F, A].hasKeyId(keylike, _)) || recipientKeyId.isEmpty)
+                        pbe
+                          .decryptToInputStream(keylike, recipientKeyId)
+                          .map(_.pure[Option])
+                          .recoverWith {
+                            case ex: KeyRingMissingKeyException =>
+                              Logger[F]
+                                .trace(ex)(s"could not decrypt using key ${pbe.getKeyID}")
+                                .as(None)
+                            case ex: KeyMismatchException =>
+                              Logger[F]
+                                .trace(ex)(s"could not decrypt using key ${pbe.getKeyID}")
+                                .as(None)
+                          }
+                      else
+                        none[InputStream].pure[F]
+
+                    case other =>
+                      Logger[F].warn(EncryptionTypeError)(s"found wrong type of encrypted data: $other").as(None)
+                  }
+                  .unNone
+                  .head // if a value survived the unNone above, we have an InputStream we can work with, so move on
+                  .flatMap(pgpInputStreamToByteStream(keylike, chunkSize))
+            }
+
+            def ignore(s: String): Stream[F, Byte] =
+              Logger[Stream[F, *]].trace(s"ignoring $s") >> Stream.empty
+
+            pgpIS =>
+              Logger[Stream[F, *]].trace("starting pgpInputStreamToByteStream") >>
+                Stream.fromBlockingIterator[F](
+                  new PGPObjectFactory(pgpIS, fingerprintCalculator).iterator().asScala,
+                  objectIteratorChunkSize
+                )
+                  .flatMap {
+                    case _: PGPSignatureList => ignore("PGPSignatureList")
+                    case _: PGPSecretKeyRing => ignore("PGPSecretKeyRing")
+                    case _: PGPPublicKeyRing => ignore("PGPPublicKeyRing")
+                    case _: PGPPublicKey => ignore("PGPPublicKey")
+                    case x: PGPCompressedData => pgpCompressedDataToBytes(x)
+                    case x: PGPLiteralData => pgpLiteralDataToBytes(x)
+                    case x: PGPEncryptedDataList => pgpEncryptedDataListToBytes(x)
+                    case _: PGPOnePassSignatureList => ignore("PGPOnePassSignatureList")
+                    case _: PGPMarker => ignore("PGPMarker")
+                    case other => Logger[Stream[F, *]].warn(s"found unexpected $other") >> Stream.empty
+                  }
+          }
+
+          private def pipeToDecoderStream: Pipe[F, Byte, InputStream] =
+            _.through(toInputStream[F])
+              .evalTap(_ => Logger[F].trace("we have an InputStream containing the cryptotext"))
+              .evalMap { cryptoIS =>
+                Sync[F].blocking {
+                  PGPUtil.getDecoderStream(cryptoIS)
+                }
+              }
+
+          override def decrypt(keyring: PGPSecretKeyRingCollection,
+                               passphrase: Array[Char],
+                               chunkSize: ChunkSize): Pipe[F, Byte, Byte] =
+            _.through(pipeToDecoderStream)
+              .flatMap(pgpInputStreamToByteStream((keyring, passphrase), chunkSize))
+
+          override def decrypt(keyring: PGPSecretKeyRing,
+                               passphrase: Array[Char],
+                               chunkSize: ChunkSize): Pipe[F, Byte, Byte] =
+            _.through(pipeToDecoderStream)
+              .flatMap(pgpInputStreamToByteStream((keyring, passphrase), chunkSize))
+
+          override def decrypt(key: PGPPrivateKey, chunkSize: ChunkSize): Pipe[F, Byte, Byte] =
+            _.through(pipeToDecoderStream)
+              .flatMap(pgpInputStreamToByteStream(key, chunkSize))
+
+          private def writeToArmorer(armorer: OutputStream): Pipe[F, Byte, Unit] =
+            _.through(writeOutputStream(armorer.pure[F], closeStreamsAfterUse))
+
+          override def armor(chunkSize: ChunkSize): Pipe[F, Byte, Byte] = bytes =>
+            readOutputStream(chunkSize.value) { out =>
+              Stream.resource(Resource.fromAutoCloseable(Sync[F].blocking(new ArmoredOutputStream(out))))
+                .flatMap(writeToArmorer(_)(bytes))
                 .compile
                 .drain
-          }
-        }
-
-      private val objectIteratorChunkSize: ChunkSize = tagChunkSize(1)
-
-      private def pgpInputStreamToByteStream[A: DecryptToInputStream[F, *]](keylike: A,
-                                                                            chunkSize: ChunkSize): InputStream => Stream[F, Byte] = {
-        def pgpCompressedDataToBytes(pcd: PGPCompressedData): Stream[F, Byte] =
-          Logger[Stream[F, *]].trace("Found compressed data") >>
-            pgpInputStreamToByteStream(keylike, chunkSize).apply(pcd.getDataStream)
-
-        /*
-         * Literal data is not to be further processed, so its contents
-         * are the bytes to be read and output.
-         */
-        def pgpLiteralDataToBytes(pld: PGPLiteralData): Stream[F, Byte] =
-          Logger[Stream[F, *]].trace(s"found literal data for file: ${pld.getFileName} and format: ${pld.getFormat}") >>
-            readInputStream(Sync[F].blocking(pld.getDataStream), chunkSize.value)
-
-        def pgpEncryptedDataListToBytes(pedl: PGPEncryptedDataList): Stream[F, Byte] = {
-          Logger[Stream[F, *]].trace(s"found ${pedl.size()} encrypted data packets") >>
-            Stream.fromBlockingIterator[F](pedl.iterator().asScala, objectIteratorChunkSize)
-              .evalMap[F, Option[InputStream]] {
-                case pbe: PGPPublicKeyEncryptedData =>
-                  // a key ID of 0L indicates a "hidden" recipient,
-                  // and we can't use that key ID to lookup the key
-                  val recipientKeyId = Option(pbe.getKeyID).filterNot(_ == 0)
-
-                  // if the recipient is identified, check if it exists in the key material we have
-                  // if it does, or if the recipient is undefined, try to decrypt.
-                  if (recipientKeyId.exists(DecryptToInputStream[F, A].hasKeyId(keylike, _)) || recipientKeyId.isEmpty)
-                    pbe
-                      .decryptToInputStream(keylike, recipientKeyId)
-                      .map(_.pure[Option])
-                      .recoverWith {
-                        case ex: KeyRingMissingKeyException =>
-                          Logger[F]
-                            .trace(ex)(s"could not decrypt using key ${pbe.getKeyID}")
-                            .as(None)
-                        case ex: KeyMismatchException =>
-                          Logger[F]
-                            .trace(ex)(s"could not decrypt using key ${pbe.getKeyID}")
-                            .as(None)
-                      }
-                  else
-                    none[InputStream].pure[F]
-
-                case other =>
-                  Logger[F].warn(EncryptionTypeError)(s"found wrong type of encrypted data: $other").as(None)
-              }
-              .unNone
-              .head // if a value survived the unNone above, we have an InputStream we can work with, so move on
-              .flatMap(pgpInputStreamToByteStream(keylike, chunkSize))
-        }
-
-        def ignore(s: String): Stream[F, Byte] =
-          Logger[Stream[F, *]].trace(s"ignoring $s") >> Stream.empty
-
-        pgpIS =>
-          Logger[Stream[F, *]].trace("starting pgpInputStreamToByteStream") >>
-            Stream.fromBlockingIterator[F](
-              new PGPObjectFactory(pgpIS, fingerprintCalculator).iterator().asScala,
-              objectIteratorChunkSize
-            )
-              .flatMap {
-                case _: PGPSignatureList => ignore("PGPSignatureList")
-                case _: PGPSecretKeyRing => ignore("PGPSecretKeyRing")
-                case _: PGPPublicKeyRing => ignore("PGPPublicKeyRing")
-                case _: PGPPublicKey => ignore("PGPPublicKey")
-                case x: PGPCompressedData => pgpCompressedDataToBytes(x)
-                case x: PGPLiteralData => pgpLiteralDataToBytes(x)
-                case x: PGPEncryptedDataList => pgpEncryptedDataListToBytes(x)
-                case _: PGPOnePassSignatureList => ignore("PGPOnePassSignatureList")
-                case _: PGPMarker => ignore("PGPMarker")
-                case other => Logger[Stream[F, *]].warn(s"found unexpected $other") >> Stream.empty
-              }
-      }
-
-      private def pipeToDecoderStream: Pipe[F, Byte, InputStream] =
-        _.through(toInputStream[F])
-          .evalTap(_ => Logger[F].trace("we have an InputStream containing the cryptotext"))
-          .evalMap { cryptoIS =>
-            Sync[F].blocking {
-              PGPUtil.getDecoderStream(cryptoIS)
             }
-          }
-
-      override def decrypt(keyring: PGPSecretKeyRingCollection,
-                           passphrase: Array[Char],
-                           chunkSize: ChunkSize): Pipe[F, Byte, Byte] =
-        _.through(pipeToDecoderStream)
-          .flatMap(pgpInputStreamToByteStream((keyring, passphrase), chunkSize))
-
-      override def decrypt(keyring: PGPSecretKeyRing,
-                           passphrase: Array[Char],
-                           chunkSize: ChunkSize): Pipe[F, Byte, Byte] =
-        _.through(pipeToDecoderStream)
-          .flatMap(pgpInputStreamToByteStream((keyring, passphrase), chunkSize))
-
-      override def decrypt(key: PGPPrivateKey, chunkSize: ChunkSize): Pipe[F, Byte, Byte] =
-        _.through(pipeToDecoderStream)
-          .flatMap(pgpInputStreamToByteStream(key, chunkSize))
-
-      private def writeToArmorer(armorer: OutputStream): Pipe[F, Byte, Unit] =
-        _.through(writeOutputStream(armorer.pure[F], closeStreamsAfterUse))
-
-      override def armor(chunkSize: ChunkSize): Pipe[F, Byte, Byte] = bytes =>
-        readOutputStream(chunkSize.value) { out =>
-          Stream.resource(Resource.fromAutoCloseable(Sync[F].blocking(new ArmoredOutputStream(out))))
-            .flatMap(writeToArmorer(_)(bytes))
-            .compile
-            .drain
         }
-    }
-
-  @deprecated("use the variant with LoggerFactory instead", "0.4.0")
-  override def apply[F[_]](F: Async[F], L: Logger[F]): Resource[F, CryptoAlg[F]] = CryptoAlg.withLogger[F](F, L)
-}
-
-// only kept to maintain binary compatibility
-trait CryptoAlgPlatform {
-  @deprecated("use the variant with LoggerFactory instead", "0.4.0")
-  private[crypto] def apply[F[_]](ev1: Async[F], ev2: Logger[F]): Resource[F, CryptoAlg[F]] = CryptoAlg.withLogger[F](ev1, ev2)
+      }
 }
 
 class EncryptionConfig private(val chunkSize: ChunkSize,
