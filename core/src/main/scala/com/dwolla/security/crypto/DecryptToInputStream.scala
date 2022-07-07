@@ -13,6 +13,8 @@ import scala.jdk.CollectionConverters._
 private[crypto] sealed trait DecryptToInputStream[F[_], A] {
   def decryptToInputStream(input: A, maybeKeyId: Option[Long])
                           (pbed: PGPPublicKeyEncryptedData): F[InputStream]
+
+  def hasKeyId(input: A, id: Long): Boolean
 }
 
 private[crypto] object DecryptToInputStream {
@@ -60,6 +62,9 @@ private[crypto] object DecryptToInputStream {
 
   implicit def PGPSecretKeyRingCollectionInstance[F[_] : Sync]: DecryptToInputStream[F, (PGPSecretKeyRingCollection, Array[Char])] =
     new DecryptToInputStream[F, (PGPSecretKeyRingCollection, Array[Char])] {
+      override def hasKeyId(input: (PGPSecretKeyRingCollection, Array[Char]), id: Long): Boolean =
+        input._1.contains(id)
+
       override def decryptToInputStream(input: (PGPSecretKeyRingCollection, Array[Char]),
                                         maybeKeyId: Option[Long])
                                        (pbed: PGPPublicKeyEncryptedData): F[InputStream] =
@@ -77,6 +82,13 @@ private[crypto] object DecryptToInputStream {
 
   implicit def PGPSecretKeyRingInstance[F[_] : Sync]: DecryptToInputStream[F, (PGPSecretKeyRing, Array[Char])] =
     new DecryptToInputStream[F, (PGPSecretKeyRing, Array[Char])] {
+      override def hasKeyId(input: (PGPSecretKeyRing, Array[Char]), id: Long): Boolean =
+        input
+          ._1
+          .getSecretKeys
+          .asScala
+          .exists(_.getKeyID == id)
+
       override def decryptToInputStream(input: (PGPSecretKeyRing, Array[Char]),
                                         maybeKeyId: Option[Long])
                                        (pbed: PGPPublicKeyEncryptedData): F[InputStream] = {
@@ -90,6 +102,9 @@ private[crypto] object DecryptToInputStream {
 
   implicit def PGPPrivateKeyInstance[F[_] : Sync]: DecryptToInputStream[F, PGPPrivateKey] =
     new DecryptToInputStream[F, PGPPrivateKey] {
+      override def hasKeyId(input: PGPPrivateKey, id: Long): Boolean =
+        input.getKeyID == id
+
       override def decryptToInputStream(input: PGPPrivateKey,
                                         maybeKeyId: Option[Long])
                                        (pbed: PGPPublicKeyEncryptedData): F[InputStream] =
