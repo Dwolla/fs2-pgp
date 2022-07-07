@@ -23,7 +23,7 @@ ThisBuild / tlJdkRelease := Option(8)
 ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("17"))
 ThisBuild / githubWorkflowScalaVersions := Seq("2.13", "2.12")
 ThisBuild / tlCiReleaseBranches := Seq("main", "series/0.5")
-ThisBuild / tlBaseVersion := "0.4"
+ThisBuild / tlBaseVersion := "0.5"
 ThisBuild / tlSonatypeUseLegacyHost := true
 ThisBuild / mergifyStewardConfig ~= {
   _.map(_.copy(mergeMinors = true, author = "dwolla-oss-scala-steward[bot]"))

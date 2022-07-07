@@ -14,9 +14,9 @@ import org.bouncycastle.openpgp.operator.jcajce.{JcaPGPContentSignerBuilder, Jca
 import org.scalacheck.Arbitrary
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.effect.PropF.forAllF
-import org.typelevel.log4cats._
-import org.typelevel.log4cats.noop.NoOpLogger
 import com.eed3si9n.expecty.Expecty.{assert => Assert}
+import org.typelevel.log4cats.LoggerFactory
+import org.typelevel.log4cats.slf4j.Slf4jFactory
 
 import scala.jdk.CollectionConverters._
 
@@ -25,10 +25,8 @@ class PGPKeyAlgSpec
     with ScalaCheckEffectSuite
     with PgpArbitraries
     with CryptoArbitraries {
-  private implicit val L: LoggerFactory[IO] = new LoggerFactory[IO] {
-    override def getLoggerFromName(name: String): SelfAwareStructuredLogger[IO] = NoOpLogger[IO]
-    override def fromName(name: String): IO[SelfAwareStructuredLogger[IO]] = NoOpLogger[IO].pure[IO]
-  }
+
+  private implicit val loggerFactory: LoggerFactory[IO] = Slf4jFactory.create[IO]
 
   test("PGPKeyAlg should load a PGPPublicKey from armored public key") {
     val key =
