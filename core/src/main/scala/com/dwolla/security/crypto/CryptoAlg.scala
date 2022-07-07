@@ -180,18 +180,24 @@ object CryptoAlg extends CryptoAlgPlatform {
                   // and we can't use that key ID to lookup the key
                   val recipientKeyId = Option(pbe.getKeyID).filterNot(_ == 0)
 
-                  pbe.decryptToInputStream(keylike, recipientKeyId)
-                    .map(_.pure[Option])
-                    .recoverWith {
-                      case ex: KeyRingMissingKeyException =>
-                        Logger[F]
-                          .trace(ex)(s"could not decrypt using key ${pbe.getKeyID}")
-                          .as(None)
-                      case ex: KeyMismatchException =>
-                        Logger[F]
-                          .trace(ex)(s"could not decrypt using key ${pbe.getKeyID}")
-                          .as(None)
-                    }
+                  // if the recipient is identified, check if it exists in the key material we have
+                  // if it does, or if the recipient is undefined, try to decrypt.
+                  if (recipientKeyId.exists(DecryptToInputStream[F, A].hasKeyId(keylike, _)) || recipientKeyId.isEmpty)
+                    pbe
+                      .decryptToInputStream(keylike, recipientKeyId)
+                      .map(_.pure[Option])
+                      .recoverWith {
+                        case ex: KeyRingMissingKeyException =>
+                          Logger[F]
+                            .trace(ex)(s"could not decrypt using key ${pbe.getKeyID}")
+                            .as(None)
+                        case ex: KeyMismatchException =>
+                          Logger[F]
+                            .trace(ex)(s"could not decrypt using key ${pbe.getKeyID}")
+                            .as(None)
+                      }
+                  else
+                    none[InputStream].pure[F]
 
                 case other =>
                   Logger[F].warn(EncryptionTypeError)(s"found wrong type of encrypted data: $other").as(None)
