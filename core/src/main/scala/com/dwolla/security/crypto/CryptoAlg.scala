@@ -1,5 +1,6 @@
 package com.dwolla.security.crypto
 
+import cats.data.NonEmptyList
 import cats.effect._
 import cats.effect.syntax.all._
 import cats.syntax.all._
@@ -19,12 +20,16 @@ import java.io._
 
 trait CryptoAlg[F[_]] {
   def encrypt(key: PGPPublicKey,
-              chunkSize: ChunkSize = defaultChunkSize,
-              fileName: Option[String] = None,
-              encryption: Encryption = Aes256,
-              compression: Compression = Zip,
-              packetFormat: PgpLiteralDataPacketFormat = Binary,
-             ): Pipe[F, Byte, Byte]
+              moreKeys: PGPPublicKey*): Pipe[F, Byte, Byte] =
+    encrypt(NonEmptyList.of(key, moreKeys: _*), EncryptionConfig())
+
+  def encrypt(config: EncryptionConfig,
+              key: PGPPublicKey,
+              moreKeys: PGPPublicKey*): Pipe[F, Byte, Byte] =
+    encrypt(NonEmptyList.of(key, moreKeys: _*), config)
+
+  def encrypt(keys: NonEmptyList[PGPPublicKey],
+              config: EncryptionConfig): Pipe[F, Byte, Byte]
 
   def decrypt(key: PGPPrivateKey,
               chunkSize: ChunkSize,
@@ -68,8 +73,11 @@ trait CryptoAlg[F[_]] {
 }
 
 object CryptoAlg extends CryptoAlgPlatform {
-  private def addKey[F[_] : Sync](pgpEncryptedDataGenerator: PGPEncryptedDataGenerator, key: PGPPublicKey): F[Unit] =
-    Sync[F].blocking(pgpEncryptedDataGenerator.addMethod(new JcePublicKeyKeyEncryptionMethodGenerator(key)))
+  private def addKeys[F[_] : Sync](pgpEncryptedDataGenerator: PGPEncryptedDataGenerator,
+                                   keys: NonEmptyList[PGPPublicKey]): F[Unit] =
+    keys.traverse_ { key =>
+      Sync[F].delay(pgpEncryptedDataGenerator.addMethod(new JcePublicKeyKeyEncryptionMethodGenerator(key)))
+    }
 
   private type PgpEncryptionPipelineComponents = (PGPEncryptedDataGenerator, PGPCompressedDataGenerator, PGPLiteralDataGenerator)
 
@@ -96,7 +104,7 @@ object CryptoAlg extends CryptoAlgPlatform {
    *
    * Plaintext -> "Literal Data" Packetizer -> Compressor -> Encryptor -> OutputStream provided by caller
    */
-  private[crypto] def encryptingOutputStream[F[_] : Sync](key: PGPPublicKey,
+  private[crypto] def encryptingOutputStream[F[_] : Sync](keys: NonEmptyList[PGPPublicKey],
                                                           chunkSize: ChunkSize,
                                                           fileName: Option[String],
                                                           encryption: Encryption,
@@ -105,7 +113,7 @@ object CryptoAlg extends CryptoAlgPlatform {
                                                           outputStreamIntoWhichToWriteEncryptedBytes: OutputStream): Resource[F, OutputStream] =
     pgpGenerators[F](encryption, compression)
       .evalTap { case (pgpEncryptedDataGenerator, _, _) =>
-        addKey[F](pgpEncryptedDataGenerator, key)
+        addKeys[F](pgpEncryptedDataGenerator, keys)
       }
       .evalMap { case (pgpEncryptedDataGenerator, pgpCompressedDataGenerator, pgpLiteralDataGenerator) =>
         for {
@@ -135,20 +143,15 @@ object CryptoAlg extends CryptoAlgPlatform {
       private val fingerprintCalculator = new JcaKeyFingerprintCalculator
       private val closeStreamsAfterUse = false
 
-      override def encrypt(key: PGPPublicKey,
-                           chunkSize: ChunkSize,
-                           fileName: Option[String] = None,
-                           encryption: Encryption = Aes256,
-                           compression: Compression = Zip,
-                           packetFormat: PgpLiteralDataPacketFormat = Binary,
-                          ): Pipe[F, Byte, Byte] =
+      override def encrypt(keys: NonEmptyList[PGPPublicKey], config: EncryptionConfig): Pipe[F, Byte, Byte] =
         _.through { bytes =>
-          readOutputStream(chunkSize.value) { outputStreamToRead =>
-            Stream
-              .resource(encryptingOutputStream[F](key, chunkSize, fileName, encryption, compression, packetFormat, outputStreamToRead))
-              .flatMap(wos => bytes.chunkN(chunkSize.value).flatMap(Stream.chunk).through(writeOutputStream(wos.pure[F], closeStreamsAfterUse)))
-              .compile
-              .drain
+          readOutputStream(config.chunkSize.value) { outputStreamToRead =>
+            Logger[F].trace(s"${List.fill(keys.length)("🔑").mkString("")} encrypting input with ${keys.length} recipients") >>
+              Stream
+                .resource(encryptingOutputStream[F](keys, config.chunkSize, config.fileName, config.encryption, config.compression, config.packetFormat, outputStreamToRead))
+                .flatMap(wos => bytes.chunkN(config.chunkSize.value).flatMap(Stream.chunk).through(writeOutputStream(wos.pure[F], closeStreamsAfterUse)))
+                .compile
+                .drain
           }
         }
 
@@ -181,7 +184,13 @@ object CryptoAlg extends CryptoAlgPlatform {
                     .map(_.pure[Option])
                     .recoverWith {
                       case ex: KeyRingMissingKeyException =>
-                        Logger[F].trace(ex)(s"could not decrypt using key ${pbe.getKeyID}").as(None)
+                        Logger[F]
+                          .trace(ex)(s"could not decrypt using key ${pbe.getKeyID}")
+                          .as(None)
+                      case ex: KeyMismatchException =>
+                        Logger[F]
+                          .trace(ex)(s"could not decrypt using key ${pbe.getKeyID}")
+                          .as(None)
                     }
 
                 case other =>
@@ -260,4 +269,28 @@ object CryptoAlg extends CryptoAlgPlatform {
 trait CryptoAlgPlatform {
   @deprecated("use the variant with LoggerFactory instead", "0.4.0")
   private[crypto] def apply[F[_]](ev1: Async[F], ev2: Logger[F]): Resource[F, CryptoAlg[F]] = CryptoAlg.withLogger[F](ev1, ev2)
+}
+
+class EncryptionConfig private(val chunkSize: ChunkSize,
+                               val fileName: Option[String],
+                               val encryption: Encryption,
+                               val compression: Compression,
+                               val packetFormat: PgpLiteralDataPacketFormat,
+                              ) {
+  private def copy(chunkSize: ChunkSize = this.chunkSize,
+                   fileName: Option[String] = this.fileName,
+                   encryption: Encryption = this.encryption,
+                   compression: Compression = this.compression,
+                   packetFormat: PgpLiteralDataPacketFormat = this.packetFormat): EncryptionConfig =
+    new EncryptionConfig(chunkSize, fileName, encryption, compression, packetFormat)
+
+  def withChunkSize(chunkSize: ChunkSize): EncryptionConfig = copy(chunkSize = chunkSize)
+  def withFileName(fileName: Option[String]): EncryptionConfig = copy(fileName = fileName)
+  def withEncryption(encryption: Encryption): EncryptionConfig = copy(encryption = encryption)
+  def withCompression(compression: Compression): EncryptionConfig = copy(compression = compression)
+  def withPacketFormat(packetFormat: PgpLiteralDataPacketFormat): EncryptionConfig = copy(packetFormat = packetFormat)
+}
+
+object EncryptionConfig {
+  def apply(): EncryptionConfig = new EncryptionConfig(defaultChunkSize, None, Aes256, Zip, Binary)
 }
