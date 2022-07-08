@@ -5,9 +5,11 @@ import eu.timepit.refined.types.all._
 import eu.timepit.refined.auto._
 import eu.timepit.refined.predicates.all.Positive
 import eu.timepit.refined.refineV
+import fs2.Stream
 import shapeless.tag
 import shapeless.tag.@@
 import org.bouncycastle.openpgp.PGPLiteralData
+import org.typelevel.log4cats.Logger
 
 package object crypto {
   type ChunkSize = PosInt @@ ChunkSizeTag
@@ -19,6 +21,8 @@ package object crypto {
 
   implicit def taggedAutoUnwrap[R[_, _], T, P, Tag](tp: R[T, P] @@ Tag)(implicit rt: RefType[R]): T =
     rt.unwrap(tp)
+
+  private[crypto] implicit def SLogger[F[_] : Logger]: Logger[Stream[F, *]] = Logger[F].mapK(Stream.functionKInstance[F])
 }
 
 package crypto {
