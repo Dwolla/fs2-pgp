@@ -85,9 +85,9 @@ class PGPKeyAlgSpec
       val testResource = keyR.evalMap { key =>
         val armored: IO[String] =
           (for {
-            crypto <- Stream.resource(CryptoAlg[IO])
+            crypto <- Stream.resource(CryptoAlg.resource[IO])
             armored <- Stream.emits(key.getEncoded)
-              .through(crypto.armor())
+              .through(crypto.armor)
               .through(text.utf8.decode)
           } yield armored).compile.resource.string.use(s => s.pure[IO])
 
@@ -112,7 +112,7 @@ class PGPKeyAlgSpec
       val testResource = kp.evalMap { keyPair =>
         val armoredKey =
           (for {
-            crypto <- CryptoAlg[IO]
+            crypto <- CryptoAlg.resource[IO]
             secretKey <- Resource.eval(IO.blocking {
               val sha1Calc: PGPDigestCalculator = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1)
               new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, "identity", sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA256), new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256, sha1Calc).setProvider("BC").build(passphrase))
@@ -121,7 +121,7 @@ class PGPKeyAlgSpec
               readOutputStream(4096) { os =>
                 IO.blocking(secretKey.encode(os))
               }
-                .through(crypto.armor())
+                .through(crypto.armor)
                 .through(text.utf8.decode)
                 .compile
                 .resource
@@ -146,7 +146,7 @@ class PGPKeyAlgSpec
       val testResource = kp.evalMap { keyPair =>
         val armoredKey =
           (for {
-            crypto <- CryptoAlg[IO]
+            crypto <- CryptoAlg.resource[IO]
             secretKey <- Resource.eval(IO.blocking {
               val sha1Calc: PGPDigestCalculator = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1)
               new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, "identity", sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA256), new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256, sha1Calc).setProvider("BC").build(passphrase))
@@ -155,7 +155,7 @@ class PGPKeyAlgSpec
               readOutputStream(chunkSize.value) { os =>
                 IO.blocking(secretKey.encode(os))
               }
-                .through(crypto.armor())
+                .through(crypto.armor)
                 .through(text.utf8.decode)
                 .compile
                 .resource
