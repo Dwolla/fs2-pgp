@@ -12,7 +12,7 @@ lazy val V = new {
   val munitCatsEffect = "1.0.7"
   val expecty = "0.15.4"
   val cats = "2.8.0"
-  val catsEffect = "3.3.13"
+  val catsEffect = "3.3.14"
   val fs2 = "3.2.10"
   val log4cats = "2.4.0"
 }
