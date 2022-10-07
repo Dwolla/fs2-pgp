@@ -127,7 +127,7 @@ lazy val `pgp-testkit` = (project in file("testkit"))
       Seq(
         "org.bouncycastle" % "bcpg-jdk18on" % V.bouncyCastle,
         "org.bouncycastle" % "bcprov-jdk18on" % V.bouncyCastle,
-        "org.scalacheck" %% "scalacheck" % "1.16.0",
+        "org.scalacheck" %% "scalacheck" % "1.17.0",
         "org.typelevel" %% "cats-core" % V.cats,
         "org.typelevel" %% "cats-effect-kernel" % V.catsEffect,
         "org.typelevel" %% "cats-effect" % V.catsEffect,
