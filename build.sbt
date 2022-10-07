@@ -6,7 +6,7 @@ lazy val V = new {
   val refined = "0.10.1"
   val shapeless = "2.3.9"
   val catsScalacheck = "0.3.1"
-  val scalaCollectionCompat = "2.8.0"
+  val scalaCollectionCompat = "2.8.1"
   val munit = "0.7.29"
   val scalacheckEffect = "1.0.4"
   val munitCatsEffect = "1.0.7"
@@ -14,7 +14,7 @@ lazy val V = new {
   val cats = "2.8.0"
   val catsEffect = "3.3.14"
   val fs2 = "3.2.14"
-  val log4cats = "2.4.0"
+  val log4cats = "2.5.0"
 }
 
 ThisBuild / scalaVersion := V.Scalas.head
