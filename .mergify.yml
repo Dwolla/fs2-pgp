@@ -1,7 +1,7 @@
 queue_rules:
   - name: default
     conditions:
-      - status-success=Build and Test (ubuntu-latest, 2.13.9, temurin@11)
+      - status-success=Build and Test (ubuntu-latest, 2.13.10, temurin@11)
       - status-success=Build and Test (ubuntu-latest, 2.12.17, temurin@11)
 
 pull_request_rules:
@@ -21,7 +21,7 @@ pull_request_rules:
   - name: merge scala-steward's PRs
     conditions:
       - author=dwolla-oss-scala-steward[bot]
-      - status-success=Build and Test (ubuntu-latest, 2.13.9, temurin@11)
+      - status-success=Build and Test (ubuntu-latest, 2.13.10, temurin@11)
       - status-success=Build and Test (ubuntu-latest, 2.12.17, temurin@11)
     actions:
       queue:
