@@ -67,7 +67,7 @@ lazy val `fs2-pgp` = (project in file("core"))
         "org.typelevel" %% "cats-core" % V.cats,
         "org.typelevel" %% "cats-effect-kernel" % V.catsEffect,
         "org.typelevel" %% "cats-effect" % V.catsEffect,
-        "org.bouncycastle" % "bcpg-jdk18on" % "1.72.1",
+        "org.bouncycastle" % "bcpg-jdk18on" % "1.72.2",
         "org.bouncycastle" % "bcprov-jdk18on" % "1.72",
         "co.fs2" %% "fs2-core" % V.fs2,
         "co.fs2" %% "fs2-io" % V.fs2,
@@ -117,7 +117,7 @@ lazy val `pgp-testkit` = (project in file("testkit"))
     description := "Scalacheck Arbitraries for PGP resources",
     libraryDependencies ++= {
       Seq(
-        "org.bouncycastle" % "bcpg-jdk18on" % "1.72.1",
+        "org.bouncycastle" % "bcpg-jdk18on" % "1.72.2",
         "org.bouncycastle" % "bcprov-jdk18on" % "1.72",
         "org.scalacheck" %% "scalacheck" % "1.17.0",
         "org.typelevel" %% "cats-core" % V.cats,
