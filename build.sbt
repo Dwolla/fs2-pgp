@@ -2,7 +2,7 @@ lazy val V = new {
   val SCALA_2_12 = "2.12.17"
   val SCALA_2_13 = "2.13.10"
   val Scalas = Seq(SCALA_2_13, SCALA_2_12)
-  val refined = "0.10.1"
+  val refined = "0.10.2"
   val shapeless = "2.3.10"
   val catsScalacheck = "0.3.2"
   val scalaCollectionCompat = "2.9.0"
@@ -12,7 +12,7 @@ lazy val V = new {
   val expecty = "0.16.0"
   val cats = "2.9.0"
   val catsEffect = "3.4.4"
-  val fs2 = "3.4.0"
+  val fs2 = "3.6.1"
   val log4cats = "2.5.0"
 }
 
