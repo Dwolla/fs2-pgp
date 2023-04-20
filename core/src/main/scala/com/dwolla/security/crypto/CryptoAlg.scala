@@ -143,13 +143,13 @@ object CryptoAlg extends CryptoAlgPlatform {
                            packetFormat: PgpLiteralDataPacketFormat = Binary,
                           ): Pipe[F, Byte, Byte] =
         _.through { bytes =>
-          readOutputStream(chunkSize.value) { outputStreamToRead =>
+          {readOutputStream(chunkSize.value) { outputStreamToRead =>
             Stream
               .resource(encryptingOutputStream[F](key, chunkSize, fileName, encryption, compression, packetFormat, outputStreamToRead))
               .flatMap(wos => bytes.chunkN(chunkSize.value).flatMap(Stream.chunk).through(writeOutputStream(wos.pure[F], closeStreamsAfterUse)))
               .compile
               .drain
-          }
+          }}
         }
 
       private val objectIteratorChunkSize: ChunkSize = tagChunkSize(1)
@@ -175,16 +175,15 @@ object CryptoAlg extends CryptoAlgPlatform {
                 case pbe: PGPPublicKeyEncryptedData =>
                   // a key ID of 0L indicates a "hidden" recipient,
                   // and we can't use that key ID to lookup the key
-                  val recipientKeyId = Option(pbe.getKeyID).filterNot(_ == 0)
-
+                  val recipientKeyId: Option[Long] = Option(pbe.getKeyID).filterNot(_ == 0)
                   pbe.decryptToInputStream(keylike, recipientKeyId)
 
                 case other =>
                   Logger[F].error(EncryptionTypeError)(s"found wrong type of encrypted data: $other") >>
                     EncryptionTypeError.raiseError[F, InputStream]
               }
-              .head // TODO what happens if pedl contains multiple recipients?
-              .flatMap(pgpInputStreamToByteStream(keylike, chunkSize))
+              .collectFirst{s: InputStream => s} // TODO what happens if pedl contains multiple recipients?
+              .flatMap{pgpInputStreamToByteStream(keylike, chunkSize)}
         }
 
         def ignore(s: String): Stream[F, Byte] =
