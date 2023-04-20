@@ -367,6 +367,60 @@ class CryptoAlgSpec
     }
   }
 
+  /*
+   * Steps to generate cryptotext on macOS, having copied the test key to the clipboard:
+   *
+   *  > export GNUPGHOME="$(mktemp -d)/.gnupg"
+   *  > mkdir -m 0700 -p "${GNUPGHOME}"
+   *  > pbpaste | gpg --import
+   *  > # pause here, copy the secondary key into the clipboard
+   *  > pbpaste | gpg --import
+   *  > echo "Hello World" | gpg --encrypt --armor --recipient "key 2 <key2@dwolla.com> --recipient "key 1 <key1@dwolla.com>"
+   */
+  test("CryptoAlg should decrypt cryptotext with multiple recipients using secret key collection") {
+    val crypto = resource()
+    
+    val message = 
+      """-----BEGIN PGP MESSAGE-----
+        |
+        |hQGMAzY3u+LAhf1LAQv/Z38VFkyLZglKYLfr7uLoX0kzewFKO2fOMLZfIeTkXteI
+        |pTmpjra93bBiDX5osdL+NCf7kw20Bh+gX8aN2bE3N9DXccNBDidt21GdXCrBN293
+        |b5hB3ysDPbHsqr0EVrDdFZmaZkuvqmO5mzED1eMAMSDZnj9MGuu1jxGphlJ56O6K
+        |eP1T15aJZCteLpnOaxlxMXf8Vyd6oBRumHDhaNocOQcVzDTHv/yXhxbcumkbX74w
+        |vJjOrQekrpqZdrpuvL3/t4OLNSmrQhgiCpRrvIxfFvwXdPlrpMX15K1NxsvwSnzp
+        |2a8fX2TSQtv6XGod0XbLmga4MtelfbLFFQVIa+dYpZpmaEQQf+T2730nf7mh54Zz
+        |xd9PwCxNnLax0HtFdNHZKJB6StgnuXyifNuNoJYwu0nPniIFRm34e33OWV++31Jg
+        |E5NVRgfIYMN1Jb4iVCvaA8UYLi2A/FmmSyCC4meWyESEBq13vnlAuOclQ5P/nA5V
+        |b/lK/d3TTLERhWRpqLoZhQGMA1TkhEz+fGjhAQwAsvrx4a58A/KRgV9nlZAVoJKB
+        |9CbuqT/iEWL8yEfaD7tGqWnH52SYZhy6Bp9abhMQ74wfGxNx/ou4/xVJLNoMAx6w
+        |D/rTC1hfJx2T+aUgBFHgjZk6frCILXcJIFxNUs6FZzws+3Wn/mJdrLLhiy/dB9l+
+        |B/s4zQgeDue/RsfHw3vAljP4M4O6Jkr/v9E04sTCNmmZ+js99G7huAsfTEmLaWvY
+        |FX3ST/zjvO9MmjHYCKDvGZeOrxZ+U4Ke1glHqoD11U2KchLTFzS/+CmE/9AbV8N/
+        |jnC3KKIfdzf5baWDrqO+icu7A2fcFCMu6AmyzJd/zuS0IMQMNZXiyR1DEUJg6qnd
+        |yT9g2GLlOJDETSVvE1hfyvrLDSBHtFA1uoxkTg7J9k8SfH/44atkigQoDLS6Tkoh
+        |Wq1jS+HCdNpgg7lhtyuC3nYhg6lPSD46SbOj+umB0C161/XiGUvFvu5Iw6AEni2N
+        |ssZLujYlZQdl0zZiMK9tf+bNEjJjZ4BErtqkCY8s0kcBYiQtZb2Py6pb8sqL75sd
+        |tZKE+J7duo1GdvI5VqgHRakgeFJtOyrbHtTtl/SLRfhewRyYPcbiBVod3GunRE4p
+        |ijuxbxOi9A==
+        |=MMZb
+        |-----END PGP MESSAGE-----
+        |""".stripMargin
+
+    for {
+      key <- PGPKeyAlg[IO].readSecretKeyCollection(TestKey())
+      text <- Stream
+        .emit(message)
+        .through(text.utf8.encode)
+        .through(crypto.decrypt(key))
+        .through(text.utf8.decode)
+        .compile
+        .lastOrError
+    } yield {
+      assertEquals(text, "Hello World\n")
+    }
+    
+  }
+
   private implicit def prettyArrayChar: Array[Char] => Pretty = arr => Pretty { _ =>
     arr.toList.map("'" + _ + "'").mkString("Array(", ", ", ")")
   }
