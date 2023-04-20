@@ -67,15 +67,13 @@ lazy val `fs2-pgp` = (project in file("core"))
         "org.typelevel" %% "cats-core" % V.cats,
         "org.typelevel" %% "cats-effect-kernel" % V.catsEffect,
         "org.typelevel" %% "cats-effect" % V.catsEffect,
-        "org.bouncycastle" % "bcpg-jdk18on" % "1.72.2",
-        "org.bouncycastle" % "bcprov-jdk18on" % "1.72",
         "co.fs2" %% "fs2-core" % V.fs2,
         "co.fs2" %% "fs2-io" % V.fs2,
         "com.chuusai" %% "shapeless" % V.shapeless,
         "org.scala-lang.modules" %% "scala-collection-compat" % V.scalaCollectionCompat,
         "org.typelevel" %% "log4cats-core" % V.log4cats,
         "eu.timepit" %% "refined" % V.refined,
-      )
+      ) ++ bouncyCastleArtifacts
     },
     unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),
     mimaBinaryIssueFilters ++= {
@@ -88,7 +86,8 @@ lazy val `fs2-pgp` = (project in file("core"))
       )
     },
   )
-  .settings(commonSettings: _*)
+  .settings(commonSettings)
+  .enablePlugins(BouncyCastlePlugin)
 
 lazy val tests = (project in file("tests"))
   .settings(
@@ -142,4 +141,5 @@ lazy val `fs2-pgp-root` = (project in file("."))
     `fs2-pgp`,
     tests,
     `pgp-testkit`,
+    BouncyCastlePlugin.rootBouncyCastle,
   )
