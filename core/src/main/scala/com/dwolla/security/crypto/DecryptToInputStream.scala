@@ -65,11 +65,12 @@ private[crypto] object DecryptToInputStream {
                                        (pbed: PGPPublicKeyEncryptedData): F[InputStream] =
         maybeKeyId
           .toOptionT
-          .semiflatMap { keyId =>
+          .flatMapF { keyId =>
             ApplicativeThrow[F].catchNonFatal {
-              input._1.getSecretKey(keyId).pure[List]
+              Option(input._1.getSecretKey(keyId))
             }
           }
+          .map(_.pure[List])
           .getOrElse(input._1.getKeyRings.asScala.toList.flatMap(_.getSecretKeys.asScala))
           .flatMap(decryptWithKeys(_, input._2, pbed, maybeKeyId))
     }
@@ -80,7 +81,7 @@ private[crypto] object DecryptToInputStream {
                                         maybeKeyId: Option[Long])
                                        (pbed: PGPPublicKeyEncryptedData): F[InputStream] = {
         val keys = maybeKeyId.fold(input._1.getSecretKeys.asScala.toList) { keyId =>
-          input._1.getSecretKey(keyId).pure[List]
+          Option(input._1.getSecretKey(keyId)).toList
         }
 
         decryptWithKeys(keys, input._2, pbed, maybeKeyId)
