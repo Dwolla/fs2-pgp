@@ -171,19 +171,24 @@ object CryptoAlg extends CryptoAlgPlatform {
         def pgpEncryptedDataListToBytes(pedl: PGPEncryptedDataList): Stream[F, Byte] = {
           Logger[Stream[F, *]].trace(s"found ${pedl.size()} encrypted data packets") >>
             Stream.fromBlockingIterator[F](pedl.iterator().asScala, objectIteratorChunkSize)
-              .evalMap {
+              .evalMap[F, Option[InputStream]] {
                 case pbe: PGPPublicKeyEncryptedData =>
                   // a key ID of 0L indicates a "hidden" recipient,
                   // and we can't use that key ID to lookup the key
                   val recipientKeyId = Option(pbe.getKeyID).filterNot(_ == 0)
 
                   pbe.decryptToInputStream(keylike, recipientKeyId)
+                    .map(_.pure[Option])
+                    .recoverWith {
+                      case ex: KeyRingMissingKeyException =>
+                        Logger[F].trace(ex)(s"could not decrypt using key ${pbe.getKeyID}").as(None)
+                    }
 
                 case other =>
-                  Logger[F].error(EncryptionTypeError)(s"found wrong type of encrypted data: $other") >>
-                    EncryptionTypeError.raiseError[F, InputStream]
+                  Logger[F].warn(EncryptionTypeError)(s"found wrong type of encrypted data: $other").as(None)
               }
-              .head // TODO what happens if pedl contains multiple recipients?
+              .unNone
+              .head // if a value survived the unNone above, we have an InputStream we can work with, so move on
               .flatMap(pgpInputStreamToByteStream(keylike, chunkSize))
         }
 
