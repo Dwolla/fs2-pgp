@@ -116,8 +116,6 @@ lazy val `pgp-testkit` = (project in file("testkit"))
     description := "Scalacheck Arbitraries for PGP resources",
     libraryDependencies ++= {
       Seq(
-        "org.bouncycastle" % "bcpg-jdk18on" % "1.72.2",
-        "org.bouncycastle" % "bcprov-jdk18on" % "1.72",
         "org.scalacheck" %% "scalacheck" % "1.17.0",
         "org.typelevel" %% "cats-core" % V.cats,
         "org.typelevel" %% "cats-effect-kernel" % V.catsEffect,
@@ -128,12 +126,12 @@ lazy val `pgp-testkit` = (project in file("testkit"))
         "io.chrisdavenport" %% "cats-scalacheck" % V.catsScalacheck,
         "co.fs2" %% "fs2-core" % V.fs2,
         "org.scala-lang.modules" %% "scala-collection-compat" % V.scalaCollectionCompat
-      )
+      ) ++ bouncyCastleArtifacts
     },
     unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),
   )
   .dependsOn(`fs2-pgp`)
-  .settings(commonSettings: _*)
+  .settings(commonSettings)
 
 lazy val `fs2-pgp-root` = (project in file("."))
   .settings(publishArtifact := false)
