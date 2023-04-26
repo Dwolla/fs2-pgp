@@ -24,8 +24,8 @@ object BouncyCastlePlugin extends AutoPlugin {
    * versions it was checked against.
    */
   lazy val modules = Seq(
-    ArtifactVersions("org.bouncycastle" % "bcpg-jdk18on" % "1.72.2", Seq("1.72.1")),
-    ArtifactVersions("org.bouncycastle" % "bcprov-jdk18on" % "1.72", Seq()),
+    ArtifactVersions("org.bouncycastle" % "bcpg-jdk18on" % "1.71", Seq()),
+    ArtifactVersions("org.bouncycastle" % "bcprov-jdk18on" % "1.71", Seq()),
   )
 
   private lazy val subprojects = modules.map { module =>
