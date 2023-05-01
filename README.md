@@ -33,6 +33,20 @@ A library for encrypting and decrypting fs2 `Stream[F, Byte]` using PGP.
 </tbody>
 </table>
 
+## Bouncy Castle Versions
+
+Bouncy Castle often releases versions that report as binary-incompatible with 
+previous versions when examined with a tool such as [MiMa](https://github.com/lightbend/mima).
+The "current" version of the artifacts published by this project intend to track
+the latest Bouncy Castle version, with previously supported versions published 
+as supplemental artifacts with the supported Bouncy Castle version appended to
+the artifact name.
+
+For example, the latest Bouncy Castle version is `1.73`, so the latest version of
+`com.dwolla::fs2-pgp` depends on `org.bouncycastle:bcpg-jdk18on:1.73`. In addition,
+we publish artifacts named like `com.dwolla::fs2-pgp-bcpg1.72.1` for each of the
+previously supported Bouncy Castle artifacts.
+
 ## Keys
 
 ```scala
