@@ -20,6 +20,9 @@ object BouncyCastlePlugin extends AutoPlugin {
   // When a new version is released, move what was previously the latest version into the list of old versions.
   // This plugin will automatically release a new suffixed artifact that can be used by users with bincompat issues.
   // Don't forget to regenerate the GitHub Actions workflow by running the `githubWorkflowGenerate` sbt task.
+  //
+  // The bcprov artifact is annoyingly not in sync with bcpg, so this same length list technique is used to explicitly 
+  // add the provider as a dependency. Otherwise importing just fs2-pgp can lead to an out-of-sync provider being used.
   private val bcpg = ArtifactVersions(
     "org.bouncycastle" % "bcpg-jdk18on" % "1.73",
     List(
@@ -27,6 +30,17 @@ object BouncyCastlePlugin extends AutoPlugin {
       "1.72.1",
       "1.72",
       "1.71.1",
+      "1.71",
+    )
+  )
+
+  private val bcprov = ArtifactVersions(
+    "org.bouncycastle" % "bcprov-jdk18on" % "1.73",
+    List(  
+      "1.72",
+      "1.72",
+      "1.72",
+      "1.71",
       "1.71",
     )
   )
@@ -48,13 +62,18 @@ object BouncyCastlePlugin extends AutoPlugin {
     },
   )
 
-  private def buildProjects(bouncyCastle: ModuleID, isLatest: Boolean): (Project, Project, Project) = {
+  private def buildProjects(
+    bouncyCastlePg: ModuleID, 
+    bouncyCastleProv: ModuleID, 
+    isLatest: Boolean
+  ): (Project, Project, Project) = {
+
     def appendSuffixIfNotLatest(separator: String)
                                (s: String): String =
-      if (isLatest) s else s + separator + bouncyCastle.revision
+      if (isLatest) s else s + separator + bouncyCastlePg.revision
 
     def adjustedFile(s: String): File =
-      if (isLatest) file(s) else file(s) / s".bcpg-${bouncyCastle.revision}"
+      if (isLatest) file(s) else file(s) / s".bcpg-${bouncyCastlePg.revision}"
 
     def projectId(s: String): String =
       appendSuffixIfNotLatest("-bcpg")(s).replace('.', '_')
@@ -77,7 +96,8 @@ object BouncyCastlePlugin extends AutoPlugin {
             "org.scala-lang.modules" %% "scala-collection-compat" % "2.10.0",
             "org.typelevel" %% "log4cats-core" % "2.6.0",
             "eu.timepit" %% "refined" % "0.10.3",
-            bouncyCastle,
+            bouncyCastlePg,
+            bouncyCastleProv
           )
         },
         unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),
@@ -145,10 +165,16 @@ object BouncyCastlePlugin extends AutoPlugin {
     (core, testkit, tests)
   }
 
-  private val (core, testkit, tests) = buildProjects(bcpg.latest, isLatest = true)
+  private val (core, testkit, tests) = buildProjects(bcpg.latest, bcprov.latest ,isLatest = true)
 
-  private val oldVersionProjects: List[Project] = bcpg.versions.flatMap { v =>
-    val (c, tk, t) = buildProjects(bcpg.latest.withRevision(v.toString), isLatest = false)
+  private val oldVersionProjects: List[Project] = bcpg.versions.zipWithIndex.flatMap { versionTuple: (Version, Int) =>
+    assert(bcpg.versions.length == bcprov.versions.length)
+    val (v, i) = versionTuple
+    val (c, tk, t) = buildProjects(
+      bcpg.latest.withRevision(v.toString),
+      bcprov.latest.withRevision(bcprov.versions(i).toString), 
+      isLatest = false
+    )
 
     List(c, tk, t)
   }
