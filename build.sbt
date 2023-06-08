@@ -1,6 +1,6 @@
 lazy val V = new {
   val SCALA_2_12 = "2.12.17"
-  val SCALA_2_13 = "2.13.10"
+  val SCALA_2_13 = "2.13.11"
   val Scalas = Seq(SCALA_2_13, SCALA_2_12)
 }
 
