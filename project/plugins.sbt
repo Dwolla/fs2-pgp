@@ -1,4 +1,4 @@
 addSbtPlugin("org.typelevel" % "sbt-typelevel-ci-release" % "0.4.22")
 addSbtPlugin("org.typelevel" % "sbt-typelevel-mergify" % "0.4.22")
 addSbtPlugin("io.github.davidgregory084" % "sbt-tpolecat" % "0.4.2")
-addSbtPlugin("com.github.cb372" % "sbt-explicit-dependencies" % "0.2.16")
+addSbtPlugin("com.github.cb372" % "sbt-explicit-dependencies" % "0.3.1")
