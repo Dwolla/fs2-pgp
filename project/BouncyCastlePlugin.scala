@@ -23,6 +23,7 @@ object BouncyCastlePlugin extends AutoPlugin {
   private val bcpg = ArtifactVersions(
     "org.bouncycastle" % "bcpg-jdk18on" % "1.74",
     List(
+      "1.73",
       "1.72.2",
       "1.72.1",
       "1.72",
