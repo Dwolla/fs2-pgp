@@ -21,8 +21,9 @@ object BouncyCastlePlugin extends AutoPlugin {
   // This plugin will automatically release a new suffixed artifact that can be used by users with bincompat issues.
   // Don't forget to regenerate the GitHub Actions workflow by running the `githubWorkflowGenerate` sbt task.
   private val bcpg = ArtifactVersions(
-    "org.bouncycastle" % "bcpg-jdk18on" % "1.73",
+    "org.bouncycastle" % "bcpg-jdk18on" % "1.74",
     List(
+      "1.73",
       "1.72.2",
       "1.72.1",
       "1.72",
