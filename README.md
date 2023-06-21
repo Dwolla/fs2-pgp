@@ -42,8 +42,8 @@ the latest Bouncy Castle version, with previously supported versions published
 as supplemental artifacts with the supported Bouncy Castle version appended to
 the artifact name.
 
-For example, the latest Bouncy Castle version is `1.74`, so the latest version of
-`com.dwolla::fs2-pgp` depends on `org.bouncycastle:bcpg-jdk18on:1.74`. In addition,
+For example, the latest Bouncy Castle version is `1.75`, so the latest version of
+`com.dwolla::fs2-pgp` depends on `org.bouncycastle:bcpg-jdk18on:1.75`. In addition,
 we publish artifacts named like `com.dwolla::fs2-pgp-bcpg1.73` for each of the
 previously supported Bouncy Castle artifacts.
 
