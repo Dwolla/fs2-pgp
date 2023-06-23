@@ -3,6 +3,7 @@ lazy val V = new {
   val SCALA_2_13 = "2.13.12"
   val SCALA_3 = "3.3.0"
   val Scalas = Seq(SCALA_3, SCALA_2_13, SCALA_2_12)
+  val ScalafixScalaVersions = Scalas.filterNot(_.startsWith("3"))
 }
 
 ThisBuild / scalaVersion := V.Scalas.head
@@ -34,3 +35,45 @@ lazy val `fs2-pgp-root` = (project in file("."))
   .settings(publishArtifact := false)
   .enablePlugins(BouncyCastlePlugin)
   .aggregate(BouncyCastlePlugin.extraProjects.map(_.project) *)
+
+lazy val `scalafix-rules` = (project in file("scalafix/rules"))
+  .settings(
+    moduleName := "fs2-pgp-scalafix",
+    crossScalaVersions := V.ScalafixScalaVersions,
+    libraryDependencies ++= Seq(
+      "ch.epfl.scala" %% "scalafix-core" % _root_.scalafix.sbt.BuildInfo.scalafixVersion,
+    )
+  )
+
+lazy val `scalafix-input` = (project in file("scalafix/input"))
+  .settings(
+    libraryDependencies ++= Seq(
+      "com.dwolla" %% "fs2-pgp" % "0.4.1",
+    ),
+    crossScalaVersions := V.ScalafixScalaVersions,
+    scalacOptions ~= { _.filterNot(_ == "-Xfatal-warnings") },
+    semanticdbEnabled := true,
+    semanticdbVersion := scalafixSemanticdb.revision,
+  )
+  .enablePlugins(NoPublishPlugin)
+
+lazy val `scalafix-output` = (project in file("scalafix/output"))
+  .settings(
+    crossScalaVersions := V.ScalafixScalaVersions,
+    scalacOptions ~= { _.filterNot(_ == "-Xfatal-warnings") },
+  )
+  .dependsOn(LocalProject("fs2-pgp"))
+  .enablePlugins(NoPublishPlugin)
+
+lazy val `scalafix-tests` = (project in file("scalafix/tests"))
+  .settings(
+    crossScalaVersions := V.ScalafixScalaVersions,
+    libraryDependencies += "ch.epfl.scala" % "scalafix-testkit" % _root_.scalafix.sbt.BuildInfo.scalafixVersion % Test cross CrossVersion.full,
+    scalafixTestkitOutputSourceDirectories := (`scalafix-output` / Compile / unmanagedSourceDirectories).value,
+    scalafixTestkitInputSourceDirectories := (`scalafix-input` / Compile / unmanagedSourceDirectories).value,
+    scalafixTestkitInputClasspath := (`scalafix-input` / Compile / fullClasspath).value,
+    scalafixTestkitInputScalacOptions := (`scalafix-input` / Compile / scalacOptions).value,
+    scalafixTestkitInputScalaVersion := (`scalafix-input` / Compile / scalaVersion).value,
+  )
+  .dependsOn(`scalafix-rules`)
+  .enablePlugins(ScalafixTestkitPlugin, NoPublishPlugin)
