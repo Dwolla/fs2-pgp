@@ -73,8 +73,8 @@ object BouncyCastlePlugin extends AutoPlugin {
           Seq(
             "org.typelevel" %% "cats-core" % "2.9.0",
             "org.typelevel" %% "cats-effect" % "3.5.1",
-            "co.fs2" %% "fs2-core" % "3.7.0",
-            "co.fs2" %% "fs2-io" % "3.7.0",
+            "co.fs2" %% "fs2-core" % "3.8.0",
+            "co.fs2" %% "fs2-io" % "3.8.0",
             "com.chuusai" %% "shapeless" % "2.3.10",
             "org.scala-lang.modules" %% "scala-collection-compat" % "2.11.0",
             "org.typelevel" %% "log4cats-core" % "2.6.0",
