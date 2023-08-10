@@ -7,7 +7,7 @@ import fs2._
 import munit.{CatsEffectSuite, ScalaCheckEffectSuite}
 import org.bouncycastle.bcpg._
 import org.bouncycastle.openpgp._
-import org.scalacheck.Arbitrary._
+import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck._
 import org.scalacheck.effect.PropF.{forAllF, forAllNoShrinkF}
 import org.scalacheck.util.Pretty
@@ -79,7 +79,7 @@ class CryptoAlgSpec
         encryptionChunkSize <- arbitrary[ChunkSize]
         // since the cryptotext is compressed, we need to generate at least 10x the chunk size to
         // be fairly confident that there will be at least one full-sized chunk
-        bytes <- genNBytesBetween(encryptionChunkSize.value * 10, 1 << 16)
+        bytes <- genNBytesBetween(encryptionChunkSize * 10, 1 << 16)
       } yield Inputs(keyPairR, encryptionChunkSize, bytes)
 
     forAllNoShrinkF(genChunkSizeTestInputs) { case Inputs(keyPairR, encryptionChunkSize, bytes) =>
@@ -97,7 +97,7 @@ class CryptoAlgSpec
         } yield chunkSizes
 
       testResource.use(chunkSizes => IO {
-        Assert(chunkSizes.contains(encryptionChunkSize.value))
+        Assert(chunkSizes.contains(encryptionChunkSize))
         Assert(Set(1, 2) contains chunkSizes.size)
       })
     }

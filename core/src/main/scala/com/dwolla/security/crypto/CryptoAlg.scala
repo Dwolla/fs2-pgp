@@ -7,7 +7,6 @@ import com.dwolla.security.crypto.Compression._
 import com.dwolla.security.crypto.DecryptToInputStream._
 import com.dwolla.security.crypto.Encryption._
 import com.dwolla.security.crypto.PgpLiteralDataPacketFormat._
-import eu.timepit.refined.auto._
 import fs2._
 import fs2.io.{readInputStream, readOutputStream, toInputStream, writeOutputStream}
 import org.bouncycastle.bcpg._
@@ -110,9 +109,9 @@ object CryptoAlg extends CryptoAlgPlatform {
       .evalMap { case (pgpEncryptedDataGenerator, pgpCompressedDataGenerator, pgpLiteralDataGenerator) =>
         for {
           now <- Clock[F].realTime.map(_.toMillis).map(new java.util.Date(_))
-          encryptor <- Sync[F].blocking(pgpEncryptedDataGenerator.open(outputStreamIntoWhichToWriteEncryptedBytes, Array.ofDim[Byte](chunkSize.value)))
+          encryptor <- Sync[F].blocking(pgpEncryptedDataGenerator.open(outputStreamIntoWhichToWriteEncryptedBytes, Array.ofDim[Byte](chunkSize)))
           compressor <- Sync[F].blocking(pgpCompressedDataGenerator.open(encryptor))
-          literalizer <- Sync[F].blocking(pgpLiteralDataGenerator.open(compressor, packetFormat.tag, fileName.getOrElse(PGPLiteralData.CONSOLE), now, Array.ofDim[Byte](chunkSize.value)))
+          literalizer <- Sync[F].blocking(pgpLiteralDataGenerator.open(compressor, packetFormat.tag, fileName.getOrElse(PGPLiteralData.CONSOLE), now, Array.ofDim[Byte](chunkSize)))
         } yield literalizer
       }
 
@@ -143,16 +142,16 @@ object CryptoAlg extends CryptoAlgPlatform {
                            packetFormat: PgpLiteralDataPacketFormat = Binary,
                           ): Pipe[F, Byte, Byte] =
         _.through { bytes =>
-          readOutputStream(chunkSize.value) { outputStreamToRead =>
+          readOutputStream(chunkSize) { outputStreamToRead =>
             Stream
               .resource(encryptingOutputStream[F](key, chunkSize, fileName, encryption, compression, packetFormat, outputStreamToRead))
-              .flatMap(wos => bytes.chunkN(chunkSize.value).flatMap(Stream.chunk).through(writeOutputStream(wos.pure[F], closeStreamsAfterUse)))
+              .flatMap(wos => bytes.chunkN(chunkSize).flatMap(Stream.chunk).through(writeOutputStream(wos.pure[F], closeStreamsAfterUse)))
               .compile
               .drain
           }
         }
 
-      private val objectIteratorChunkSize: ChunkSize = tagChunkSize(1)
+      private val objectIteratorChunkSize: ChunkSize = 1
 
       private def pgpInputStreamToByteStream[A: DecryptToInputStream[F, *]](keylike: A,
                                                                             chunkSize: ChunkSize): InputStream => Stream[F, Byte] = {
@@ -166,7 +165,7 @@ object CryptoAlg extends CryptoAlgPlatform {
          */
         def pgpLiteralDataToBytes(pld: PGPLiteralData): Stream[F, Byte] =
           Logger[Stream[F, *]].trace(s"found literal data for file: ${pld.getFileName} and format: ${pld.getFormat}") >>
-            readInputStream(Sync[F].blocking(pld.getDataStream), chunkSize.value)
+            readInputStream(Sync[F].blocking(pld.getDataStream), chunkSize)
 
         def pgpEncryptedDataListToBytes(pedl: PGPEncryptedDataList): Stream[F, Byte] = {
           Logger[Stream[F, *]].trace(s"found ${pedl.size()} encrypted data packets") >>
@@ -244,7 +243,7 @@ object CryptoAlg extends CryptoAlgPlatform {
         _.through(writeOutputStream(armorer.pure[F], closeStreamsAfterUse))
 
       override def armor(chunkSize: ChunkSize): Pipe[F, Byte, Byte] = bytes =>
-        readOutputStream(chunkSize.value) { out =>
+        readOutputStream(chunkSize) { out =>
           Stream.resource(Resource.fromAutoCloseable(Sync[F].blocking(new ArmoredOutputStream(out))))
             .flatMap(writeToArmorer(_)(bytes))
             .compile

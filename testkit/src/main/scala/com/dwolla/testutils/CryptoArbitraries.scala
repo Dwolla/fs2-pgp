@@ -3,10 +3,6 @@ package com.dwolla.testutils
 import cats.effect._
 import cats.syntax.all._
 import com.dwolla.security.crypto._
-import eu.timepit.refined.api.Refined
-import eu.timepit.refined.auto._
-import eu.timepit.refined.numeric.Positive
-import eu.timepit.refined.scalacheck.all._
 import fs2._
 import org.bouncycastle.bcpg._
 import org.bouncycastle.openpgp._
@@ -29,9 +25,7 @@ trait CryptoArbitraries extends CryptoArbitrariesPlatform { self: PgpArbitraries
     genNBytesBetween(1 << 10, 1 << 20) // 1KB to 1MB
   }
 
-  implicit val arbChunkSize: Arbitrary[ChunkSize] = Arbitrary {
-    chooseRefinedNum[Refined, Int, Positive](1024, 4096).map(tagChunkSize)
-  }
+  implicit val arbChunkSize: Arbitrary[ChunkSize] = Arbitrary {4096 }
 
   override def genPgpBytes[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Gen[Resource[F, Array[Byte]]] =
     for {

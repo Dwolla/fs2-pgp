@@ -6,7 +6,7 @@ import scala.annotation.nowarn
 import scala.runtime.{AbstractFunction1, AbstractFunction2}
 import scala.util.control.NoStackTrace
 
-class KeyRingMissingKeyException(expectedKeyId: Option[Long])
+class KeyRingMissingKeyException(val expectedKeyId: Option[Long])
   extends RuntimeException(s"Cannot decrypt message with the passed keyring because ${expectedKeyId.fold("it does not contain a compatible key and the message recipient is hidden")(id => s"it requires key $id, but the ring does not contain that key")}")
     with NoStackTrace
     with Product
@@ -24,12 +24,9 @@ class KeyRingMissingKeyException(expectedKeyId: Option[Long])
   @deprecated("only maintained for bincompat reasons", "0.4.0")
   override def canEqual(that: Any): Boolean = that.isInstanceOf[KeyRingMissingKeyException]
 
-  @deprecated("only maintained for bincompat reasons", "0.4.0")
-  def expectedKeyId(): Long = expectedKeyId.getOrElse(0)
-
   @nowarn
   @deprecated("only maintained for bincompat reasons", "0.4.0")
-  def copy(keyId: Long = expectedKeyId()): KeyRingMissingKeyException = KeyRingMissingKeyException(keyId)
+  def copy(keyId: Option[Long] = expectedKeyId): KeyRingMissingKeyException = KeyRingMissingKeyException(keyId)
 }
 
 object KeyRingMissingKeyException extends AbstractFunction1[Long, KeyRingMissingKeyException] {
@@ -39,10 +36,10 @@ object KeyRingMissingKeyException extends AbstractFunction1[Long, KeyRingMissing
 
   @deprecated("only maintained for bincompat reasons", "0.4.0")
   def unapply(arg: KeyRingMissingKeyException): Option[Long] =
-    arg.expectedKeyId().some
+    arg.expectedKeyId
 }
 
-class KeyMismatchException(expectedKeyId: Option[Long], val actualKeyId: Long)
+class KeyMismatchException(val expectedKeyId: Option[Long], val actualKeyId: Long)
   extends RuntimeException(s"Cannot decrypt message with key $actualKeyId${expectedKeyId.fold(". (The message recipient is hidden.)")(id => s" because it requires key $id")}")
     with NoStackTrace
     with Product
@@ -64,19 +61,16 @@ class KeyMismatchException(expectedKeyId: Option[Long], val actualKeyId: Long)
   @deprecated("only maintained for bincompat reasons", "0.4.0")
   override def canEqual(that: Any): Boolean = that.isInstanceOf[KeyMismatchException]
 
-  @deprecated("only maintained for bincompat reasons", "0.4.0")
-  def expectedKeyId(): Long = expectedKeyId.getOrElse(0)
-
   @nowarn
   @deprecated("only maintained for bincompat reasons", "0.4.0")
-  def copy(expectedKeyId: Long = this.expectedKeyId(), actualKeyId: Long = actualKeyId) =
-    new KeyMismatchException(Option(expectedKeyId).filter(_ == 0), actualKeyId)
+  def copy(expectedKeyId: Option[Long] = expectedKeyId, actualKeyId: Long = actualKeyId) =
+    new KeyMismatchException(expectedKeyId.filter(_ == 0), actualKeyId)
 }
 
 object KeyMismatchException extends AbstractFunction2[Long, Long, KeyMismatchException] {
   @deprecated("only maintained for bincompat reasons", "0.4.0")
   def unapply(arg: KeyMismatchException): Option[(Long, Long)] =
-    (arg.expectedKeyId(), arg.actualKeyId).some
+    (arg.expectedKeyId.getOrElse(0L), arg.actualKeyId).some
 
   def apply(expectedKeyId: Option[Long], actualKeyId: Long) = new KeyMismatchException(expectedKeyId, actualKeyId)
 

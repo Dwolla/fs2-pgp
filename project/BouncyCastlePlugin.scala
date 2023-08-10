@@ -34,18 +34,25 @@ object BouncyCastlePlugin extends AutoPlugin {
   )
 
   private val commonSettings = Seq(
-    addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.13.2" cross CrossVersion.full),
-    addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
     Compile / scalacOptions ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, n)) if n >= 13 => "-Ymacro-annotations" :: Nil
+        case Some((2, n)) if n >= 13 => "-Ymacro-annotations" :: "-Xsource:3" :: Nil
         case _ => Nil
       }
     },
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, n)) if n >= 13 => Nil
-        case _ => compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full) :: Nil
+        case Some((2, n)) if n >= 13 => Seq(
+          compilerPlugin("org.typelevel" %% "kind-projector" % "0.13.2" cross CrossVersion.full),
+          compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
+        )
+        case _ => Seq()
+      }
+    },
+    libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, n)) if n < 13 => Seq(compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full))
+        case _ => Seq()
       }
     },
   )
@@ -75,10 +82,8 @@ object BouncyCastlePlugin extends AutoPlugin {
             "org.typelevel" %% "cats-effect" % "3.5.1",
             "co.fs2" %% "fs2-core" % "3.7.0",
             "co.fs2" %% "fs2-io" % "3.7.0",
-            "com.chuusai" %% "shapeless" % "2.3.10",
             "org.scala-lang.modules" %% "scala-collection-compat" % "2.11.0",
             "org.typelevel" %% "log4cats-core" % "2.6.0",
-            "eu.timepit" %% "refined" % "0.10.3",
             bouncyCastle,
           )
         },

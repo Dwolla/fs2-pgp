@@ -5,10 +5,6 @@ import cats.effect._
 import cats.syntax.all._
 import com.dwolla.security.crypto.BouncyCastleResource
 import com.dwolla.testutils.PgpArbitraries.KeySize
-import eu.timepit.refined.W
-import eu.timepit.refined.api.Refined
-import eu.timepit.refined.auto._
-import eu.timepit.refined.predicates.all._
 import org.bouncycastle.bcpg.PublicKeyAlgorithmTags
 import org.bouncycastle.openpgp._
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPKeyPair
@@ -19,8 +15,7 @@ import java.security.KeyPairGenerator
 import java.util.Date
 
 trait PgpArbitraries extends PgpArbitrariesPlatform {
-  type KeySizePred = GreaterEqual[W.`384`.T]
-  type KeySize = Int Refined KeySizePred
+  type KeySize = Int 
 
   override implicit def arbPgpPublicKey[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Arbitrary[Resource[F, PGPPublicKey]] = Arbitrary {
     arbitrary[Resource[F, PGPKeyPair]].map(_.map(_.getPublicKey))
@@ -48,7 +43,7 @@ trait PgpArbitraries extends PgpArbitrariesPlatform {
         for {
           generator <- Sync[F].blocking {
             val instance = KeyPairGenerator.getInstance("RSA", "BC")
-            instance.initialize(keySize.value)
+            instance.initialize(keySize)
             instance
           }
           pair <- Sync[F].delay {
