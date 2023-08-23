@@ -32,4 +32,4 @@ ThisBuild / mergifyStewardConfig ~= {
 lazy val `fs2-pgp-root` = (project in file("."))
   .settings(publishArtifact := false)
   .enablePlugins(BouncyCastlePlugin)
-  .aggregate(BouncyCastlePlugin.aggregate)
+  .aggregate(BouncyCastlePlugin.extraProjects.map(_.project) *)

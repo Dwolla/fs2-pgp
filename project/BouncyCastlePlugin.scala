@@ -158,14 +158,6 @@ object BouncyCastlePlugin extends AutoPlugin {
     List(c, tk, t)
   }
 
-  // TODO can we get rid of this project by adding the aggregated projects to the root project?
-  lazy val aggregate = Project("aggregate", file(".aggregate"))
-    .aggregate((List(core, testkit, tests) ++ oldVersionProjects).map(p => LocalProject(p.id)) *)
-    .settings(
-      publishArtifact := false,
-      publish / skip := true,
-    )
-
   override lazy val extraProjects: Seq[Project] =
-    Seq(aggregate, core, testkit, tests) ++ oldVersionProjects
+    Seq(core, testkit, tests) ++ oldVersionProjects
 }
