@@ -30,7 +30,7 @@ trait CryptoArbitraries { self: PgpArbitraries =>
   }
 
   implicit val arbChunkSize: Arbitrary[ChunkSize] = Arbitrary {
-    chooseRefinedNum[Refined, Int, Positive](1024, 4096).map(tagChunkSize)
+    chooseRefinedNum[Refined, Int, Positive](1024, 4096).map(ChunkSize(_))
   }
 
   def genPgpBytes[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Gen[Resource[F, Array[Byte]]] =

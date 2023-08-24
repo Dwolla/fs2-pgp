@@ -108,7 +108,7 @@ class CryptoAlgSpec
         encryptionChunkSize <- arbitrary[ChunkSize]
         // since the cryptotext is compressed, we need to generate at least 10x the chunk size to
         // be fairly confident that there will be at least one full-sized chunk
-        bytes <- genNBytesBetween(encryptionChunkSize.value * 10, 1 << 16)
+        bytes <- genNBytesBetween(encryptionChunkSize.unrefined * 10, 1 << 16)
       } yield Inputs(keyPairR, encryptionChunkSize, bytes)
 
     forAllNoShrinkF(genChunkSizeTestInputs) { case Inputs(keyPairR, encryptionChunkSize, bytes) =>
@@ -126,7 +126,7 @@ class CryptoAlgSpec
         } yield chunkSizes
 
       testResource.use(chunkSizes => IO {
-        Assert(chunkSizes.contains(encryptionChunkSize.value))
+        Assert(chunkSizes.contains(encryptionChunkSize.unrefined))
         Assert(Set(1, 2) contains chunkSizes.size)
       })
     }

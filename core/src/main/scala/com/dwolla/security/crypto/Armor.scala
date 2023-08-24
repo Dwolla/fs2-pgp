@@ -21,7 +21,7 @@ object Armor {
     private val closeStreamsAfterUse = false
 
     override def armor(chunkSize: ChunkSize): Pipe[F, Byte, Byte] = bytes =>
-      readOutputStream(chunkSize.value) { out =>
+      readOutputStream(chunkSize.unrefined) { out =>
         Stream.resource(Resource.fromAutoCloseable(Sync[F].blocking(new ArmoredOutputStream(out))))
           .flatMap { armorer =>
             bytes.through(writeOutputStream(armorer.pure[F].widen[OutputStream], closeStreamsAfterUse))
