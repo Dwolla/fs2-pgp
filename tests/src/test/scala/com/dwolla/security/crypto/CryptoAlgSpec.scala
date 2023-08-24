@@ -59,33 +59,37 @@ class CryptoAlgSpec
       val materializedBytes: List[Byte] = bytesG.compile.toList
       val bytes = Stream.emits(materializedBytes)
       val testResource =
-        for {
-          implicit0(logger: Logger[IO]) <- LoggerFactory[IO].create(LoggerName("CryptoAlgSpec.round trip")).toResource
-          _ <- Logger[IO].trace("starting").toResource
-          keyPairs <- keyPairsR
-          _ <- Logger[IO].trace("key pairs generated").toResource
-          allRecipients = keyPairs.map(_.getPublicKey)
-          privateKeys = keyPairs.map(_.getPrivateKey)
-          _ <- Logger[IO].trace(s"encrypting with keys ${allRecipients.map(_.getKeyID)}").toResource
-          encryptedBytes <-
-            bytes
-              .through(crypto.encrypt(allRecipients, EncryptionConfig().withChunkSize(encryptionChunkSize)))
-              .through(crypto.armor(encryptionChunkSize))
-              .compile
-              .resource
-              .toVector
+        LoggerFactory[IO]
+          .create(LoggerName("CryptoAlgSpec.round trip"))
+          .toResource
+          .evalTap(_.trace("starting"))
+          .flatMap { implicit l =>
+            for {
+              keyPairs <- keyPairsR
+              _ <- Logger[IO].trace("key pairs generated").toResource
+              allRecipients = keyPairs.map(_.getPublicKey)
+              privateKeys = keyPairs.map(_.getPrivateKey)
+              _ <- Logger[IO].trace(s"encrypting with keys ${allRecipients.map(_.getKeyID)}").toResource
+              encryptedBytes <-
+                bytes
+                  .through(crypto.encrypt(allRecipients, EncryptionConfig().withChunkSize(encryptionChunkSize)))
+                  .through(crypto.armor(encryptionChunkSize))
+                  .compile
+                  .resource
+                  .toVector
 
-          decryptedBytes <-
-            privateKeys.traverse { privateKey =>
-              Logger[IO].trace(s"decrypting with key id ${privateKey.getKeyID}").toResource >>
-                Stream.emits(encryptedBytes)
-                .through(crypto.decrypt(privateKey, decryptionChunkSize))
-                .compile
-                .resource
-                .toList
-            }
-          _ <- Logger[IO].trace("done with round trips").toResource
-        } yield decryptedBytes
+              decryptedBytes <-
+                privateKeys.traverse { privateKey =>
+                  Logger[IO].trace(s"decrypting with key id ${privateKey.getKeyID}").toResource >>
+                    Stream.emits(encryptedBytes)
+                    .through(crypto.decrypt(privateKey, decryptionChunkSize))
+                    .compile
+                    .resource
+                    .toList
+                }
+              _ <- Logger[IO].trace("done with round trips").toResource
+            } yield decryptedBytes
+          }
 
       testResource.use {
         _.traverse_ { roundTrippedBytes => IO {

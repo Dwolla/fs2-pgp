@@ -1,7 +1,8 @@
 lazy val V = new {
   val SCALA_2_12 = "2.12.18"
   val SCALA_2_13 = "2.13.12"
-  val Scalas = Seq(SCALA_2_13, SCALA_2_12)
+  val SCALA_3 = "3.3.0"
+  val Scalas = Seq(SCALA_3, SCALA_2_13, SCALA_2_12)
 }
 
 ThisBuild / scalaVersion := V.Scalas.head
@@ -21,7 +22,7 @@ ThisBuild / developers := List(
 ThisBuild / githubWorkflowBuild := Seq(WorkflowStep.Sbt(List("test", "mimaReportBinaryIssues", "doc")))
 ThisBuild / tlJdkRelease := Option(8)
 ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("17"))
-ThisBuild / githubWorkflowScalaVersions := Seq("2.13", "2.12")
+ThisBuild / githubWorkflowScalaVersions := Seq("3", "2.13", "2.12")
 ThisBuild / tlCiReleaseBranches := Seq("main", "series/0.5")
 ThisBuild / tlBaseVersion := "0.5"
 ThisBuild / tlSonatypeUseLegacyHost := true

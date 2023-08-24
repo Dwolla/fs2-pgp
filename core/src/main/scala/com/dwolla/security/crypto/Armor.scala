@@ -1,12 +1,12 @@
 package com.dwolla.security.crypto
 
-import cats.effect._
-import cats.syntax.all._
-import fs2._
+import cats.effect.*
+import cats.syntax.all.*
+import fs2.*
 import fs2.io.{readOutputStream, writeOutputStream}
-import org.bouncycastle.bcpg._
+import org.bouncycastle.bcpg.*
 
-import java.io._
+import java.io.*
 import scala.annotation.nowarn
 
 trait Armor[F[_]] {

@@ -1,16 +1,15 @@
 package com.dwolla.security.crypto
 
-import cats.effect._
-import cats.syntax.all._
-import com.dwolla.security.crypto.DecryptToInputStream._
-import eu.timepit.refined.auto._
-import fs2._
+import cats.effect.*
+import cats.syntax.all.*
+import com.dwolla.security.crypto.DecryptToInputStream.*
+import fs2.*
 import fs2.io.{readInputStream, toInputStream}
-import org.bouncycastle.openpgp._
-import org.bouncycastle.openpgp.operator.jcajce._
+import org.bouncycastle.openpgp.*
+import org.bouncycastle.openpgp.operator.jcajce.*
 import org.typelevel.log4cats.{Logger, LoggerFactory}
 
-import java.io._
+import java.io.*
 import scala.annotation.nowarn
 
 trait Decrypt[F[_]] {
@@ -56,7 +55,6 @@ object Decrypt {
   @nowarn("""msg=parameter (?:value )?ev in method apply is never used""")
   def apply[F[_] : Async : Logger : LoggerFactory](implicit ev: BouncyCastleResource): Decrypt[F] = new Decrypt[F] {
     import scala.jdk.CollectionConverters._
-    private val objectIteratorChunkSize: ChunkSize = ChunkSize(1)
     private val fingerprintCalculator = new JcaKeyFingerprintCalculator
 
     private def pgpInputStreamToByteStream[A: DecryptToInputStream[F, *]](keylike: A,

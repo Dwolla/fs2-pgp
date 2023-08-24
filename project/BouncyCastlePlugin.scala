@@ -1,5 +1,7 @@
 import com.typesafe.tools.mima.plugin.MimaKeys.*
 import explicitdeps.ExplicitDepsPlugin.autoImport.*
+import org.typelevel.sbt.TypelevelKernelPlugin.autoImport.*
+import org.typelevel.sbt.TypelevelSettingsPlugin
 import sbt.*
 import sbt.Keys.*
 
@@ -36,8 +38,13 @@ object BouncyCastlePlugin extends AutoPlugin {
   )
 
   private val commonSettings = Seq(
-    addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.13.2" cross CrossVersion.full),
-    addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
+    libraryDependencies ++= {
+      if (tlIsScala3.value) Seq.empty
+      else Seq(
+        compilerPlugin("org.typelevel" %% "kind-projector" % "0.13.2" cross CrossVersion.full),
+        compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
+      )
+    },
     Compile / scalacOptions ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2, n)) if n >= 13 => "-Ymacro-annotations" :: Nil
@@ -46,8 +53,8 @@ object BouncyCastlePlugin extends AutoPlugin {
     },
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, n)) if n >= 13 => Nil
-        case _ => compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full) :: Nil
+        case Some((2, n)) if n < 13 => compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full) :: Nil
+        case _ => Nil
       }
     },
   )
@@ -99,6 +106,7 @@ object BouncyCastlePlugin extends AutoPlugin {
         }
       )
       .settings(commonSettings)
+      .enablePlugins(TypelevelSettingsPlugin)
 
     val testkit = project
       .in(adjustedFile("testkit"))
@@ -122,6 +130,7 @@ object BouncyCastlePlugin extends AutoPlugin {
       )
       .dependsOn(core)
       .settings(commonSettings)
+      .enablePlugins(TypelevelSettingsPlugin)
 
     val tests = project
       .in(adjustedFile("tests"))
@@ -147,6 +156,7 @@ object BouncyCastlePlugin extends AutoPlugin {
       )
       .dependsOn(core, testkit)
       .settings(commonSettings)
+      .enablePlugins(TypelevelSettingsPlugin)
 
     (core, testkit, tests)
   }
