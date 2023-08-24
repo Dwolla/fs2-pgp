@@ -152,7 +152,7 @@ class PGPKeyAlgSpec
               new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, "identity", sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA256), new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256, sha1Calc).setProvider("BC").build(passphrase))
             })
             armoredKey <-
-              readOutputStream(chunkSize.value) { os =>
+              readOutputStream(chunkSize.unrefined) { os =>
                 IO.blocking(secretKey.encode(os))
               }
                 .through(crypto.armor)

@@ -75,9 +75,9 @@ object Encrypt {
       .evalMap { case (pgpEncryptedDataGenerator, pgpCompressedDataGenerator, pgpLiteralDataGenerator) =>
         for {
           now <- Clock[F].realTime.map(_.toMillis).map(new java.util.Date(_))
-          encryptor <- Sync[F].blocking(pgpEncryptedDataGenerator.open(outputStreamIntoWhichToWriteEncryptedBytes, Array.ofDim[Byte](chunkSize.value)))
+          encryptor <- Sync[F].blocking(pgpEncryptedDataGenerator.open(outputStreamIntoWhichToWriteEncryptedBytes, Array.ofDim[Byte](chunkSize.unrefined)))
           compressor <- Sync[F].blocking(pgpCompressedDataGenerator.open(encryptor))
-          literalizer <- Sync[F].blocking(pgpLiteralDataGenerator.open(compressor, packetFormat.tag, fileName.getOrElse(PGPLiteralData.CONSOLE), now, Array.ofDim[Byte](chunkSize.value)))
+          literalizer <- Sync[F].blocking(pgpLiteralDataGenerator.open(compressor, packetFormat.tag, fileName.getOrElse(PGPLiteralData.CONSOLE), now, Array.ofDim[Byte](chunkSize.unrefined)))
         } yield literalizer
       }
 
@@ -87,11 +87,11 @@ object Encrypt {
 
     override def encrypt(keys: NonEmptyList[PGPPublicKey], config: EncryptionConfig): Pipe[F, Byte, Byte] =
       _.through { bytes =>
-        readOutputStream(config.chunkSize.value) { outputStreamToRead =>
+        readOutputStream(config.chunkSize.unrefined) { outputStreamToRead =>
           Logger[F].trace(s"${List.fill(keys.length)("🔑").mkString("")} encrypting input with ${keys.length} recipients") >>
             Stream
               .resource(encryptingOutputStream[F](keys, config.chunkSize, config.fileName, config.encryption, config.compression, config.packetFormat, outputStreamToRead))
-              .flatMap(wos => bytes.chunkN(config.chunkSize.value).flatMap(Stream.chunk).through(writeOutputStream(wos.pure[F], closeStreamsAfterUse)))
+              .flatMap(wos => bytes.chunkN(config.chunkSize.unrefined).flatMap(Stream.chunk).through(writeOutputStream(wos.pure[F], closeStreamsAfterUse)))
               .compile
               .drain
         }

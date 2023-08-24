@@ -56,7 +56,7 @@ object Decrypt {
   @nowarn("""msg=parameter (?:value )?ev in method apply is never used""")
   def apply[F[_] : Async : Logger : LoggerFactory](implicit ev: BouncyCastleResource): Decrypt[F] = new Decrypt[F] {
     import scala.jdk.CollectionConverters._
-    private val objectIteratorChunkSize: ChunkSize = tagChunkSize(1)
+    private val objectIteratorChunkSize: ChunkSize = ChunkSize(1)
     private val fingerprintCalculator = new JcaKeyFingerprintCalculator
 
     private def pgpInputStreamToByteStream[A: DecryptToInputStream[F, *]](keylike: A,
@@ -71,11 +71,11 @@ object Decrypt {
        */
       def pgpLiteralDataToBytes(pld: PGPLiteralData): Stream[F, Byte] =
         Logger[Stream[F, *]].trace(s"found literal data for file: ${pld.getFileName} and format: ${pld.getFormat}") >>
-          readInputStream(Sync[F].blocking(pld.getDataStream), chunkSize.value)
+          readInputStream(Sync[F].blocking(pld.getDataStream), chunkSize.unrefined)
 
       def pgpEncryptedDataListToBytes(pedl: PGPEncryptedDataList): Stream[F, Byte] = {
         Logger[Stream[F, *]].trace(s"found ${pedl.size()} encrypted data packets") >>
-          Stream.fromBlockingIterator[F](pedl.iterator().asScala, objectIteratorChunkSize)
+          Stream.fromBlockingIterator[F](pedl.iterator().asScala, objectIteratorChunkSize.unrefined)
             .evalMap[F, Option[InputStream]] {
               case pbe: PGPPublicKeyEncryptedData =>
                 // a key ID of 0L indicates a "hidden" recipient,
@@ -116,7 +116,7 @@ object Decrypt {
         Logger[Stream[F, *]].trace("starting pgpInputStreamToByteStream") >>
           Stream.fromBlockingIterator[F](
             new PGPObjectFactory(pgpIS, fingerprintCalculator).iterator().asScala,
-            objectIteratorChunkSize
+            objectIteratorChunkSize.unrefined
           )
             .flatMap {
               case _: PGPSignatureList => ignore("PGPSignatureList")
