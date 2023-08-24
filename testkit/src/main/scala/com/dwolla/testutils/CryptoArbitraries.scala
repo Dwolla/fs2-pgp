@@ -1,24 +1,24 @@
 package com.dwolla.testutils
 
-import cats.effect._
-import cats.syntax.all._
-import com.dwolla.security.crypto._
+import cats.effect.*
+import cats.syntax.all.*
+import com.dwolla.security.crypto.*
 import eu.timepit.refined.api.Refined
-import eu.timepit.refined.auto._
 import eu.timepit.refined.numeric.Positive
-import eu.timepit.refined.scalacheck.all._
-import fs2._
-import org.bouncycastle.bcpg._
-import org.bouncycastle.openpgp._
-import org.bouncycastle.openpgp.operator._
+import eu.timepit.refined.scalacheck.all.*
+import fs2.*
+import org.bouncycastle.bcpg.*
+import org.bouncycastle.openpgp.*
+import org.bouncycastle.openpgp.operator.*
 import org.bouncycastle.openpgp.operator.jcajce.{JcaPGPContentSignerBuilder, JcaPGPDigestCalculatorProviderBuilder, JcePBESecretKeyEncryptorBuilder}
-import org.scalacheck.Arbitrary._
-import org.scalacheck._
-import org.scalacheck.cats.implicits._
+import org.scalacheck.Arbitrary.*
+import org.scalacheck.*
+import org.scalacheck.cats.implicits.*
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
-trait CryptoArbitraries { self: PgpArbitraries =>
+trait CryptoArbitraries
+  extends CryptoArbitrariesPlatform { self: PgpArbitraries =>
   def genNBytesBetween(min: Int, max: Int): Gen[Stream[Pure, Byte]] =
     for {
       count <- Gen.chooseNum(min, Math.max(min, max))
@@ -30,7 +30,7 @@ trait CryptoArbitraries { self: PgpArbitraries =>
   }
 
   implicit val arbChunkSize: Arbitrary[ChunkSize] = Arbitrary {
-    chooseRefinedNum[Refined, Int, Positive](1024, 4096).map(ChunkSize(_))
+    chooseRefinedNum[Refined, Int, Positive](PosInt1024, PosInt4096).map(ChunkSize(_))
   }
 
   def genPgpBytes[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Gen[Resource[F, Array[Byte]]] =
