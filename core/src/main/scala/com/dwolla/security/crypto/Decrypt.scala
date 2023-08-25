@@ -54,8 +54,11 @@ trait Decrypt[F[_]] {
 object Decrypt {
   @nowarn("""msg=parameter (?:value )?ev in method apply is never used""")
   def apply[F[_] : Async : Logger : LoggerFactory](implicit ev: BouncyCastleResource): Decrypt[F] = new Decrypt[F] {
-    import scala.jdk.CollectionConverters._
-    private val fingerprintCalculator = new JcaKeyFingerprintCalculator
+
+    private def inputStreamToPgpObjectStream(is: InputStream): Stream[F, Any] =
+      Stream.eval(Sync[F].delay(new PGPObjectFactory(is, new JcaKeyFingerprintCalculator)))
+        .widen[java.lang.Iterable[_]]
+        .flatMap(_.stream(objectIteratorChunkSize, Sync.Type.Blocking))
 
     private def pgpInputStreamToByteStream[A: DecryptToInputStream[F, *]](keylike: A,
                                                                           chunkSize: ChunkSize): InputStream => Stream[F, Byte] = {
@@ -73,7 +76,7 @@ object Decrypt {
 
       def pgpEncryptedDataListToBytes(pedl: PGPEncryptedDataList): Stream[F, Byte] = {
         Logger[Stream[F, *]].trace(s"found ${pedl.size()} encrypted data packets") >>
-          Stream.fromBlockingIterator[F](pedl.iterator().asScala, objectIteratorChunkSize.unrefined)
+          pedl.stream(objectIteratorChunkSize, Sync.Type.Blocking)
             .evalMap[F, Option[InputStream]] {
               case pbe: PGPPublicKeyEncryptedData =>
                 // a key ID of 0L indicates a "hidden" recipient,
@@ -112,10 +115,7 @@ object Decrypt {
 
       pgpIS =>
         Logger[Stream[F, *]].trace("starting pgpInputStreamToByteStream") >>
-          Stream.fromBlockingIterator[F](
-            new PGPObjectFactory(pgpIS, fingerprintCalculator).iterator().asScala,
-            objectIteratorChunkSize.unrefined
-          )
+          inputStreamToPgpObjectStream(pgpIS)
             .flatMap {
               case _: PGPSignatureList => ignore("PGPSignatureList")
               case _: PGPSecretKeyRing => ignore("PGPSecretKeyRing")
@@ -154,5 +154,13 @@ object Decrypt {
     override def decrypt(key: PGPPrivateKey, chunkSize: ChunkSize): Pipe[F, Byte, Byte] =
       _.through(pipeToDecoderStream)
         .flatMap(pgpInputStreamToByteStream(key, chunkSize))
+  }
+
+  private implicit class IterableToStreamOps[A](val i: java.lang.Iterable[A]) extends AnyVal {
+    import scala.jdk.CollectionConverters.*
+
+    def stream[F[_] : Sync](chunkSize: ChunkSize, hint: Sync.Type): Stream[F, A] =
+      Stream.eval(Sync[F].delay(i.iterator().asScala))
+        .flatMap(Stream.fromIterator[F](_, chunkSize.unrefined, hint))
   }
 }
