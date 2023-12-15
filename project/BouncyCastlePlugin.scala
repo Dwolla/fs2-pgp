@@ -1,5 +1,7 @@
 import com.typesafe.tools.mima.plugin.MimaKeys.*
 import explicitdeps.ExplicitDepsPlugin.autoImport.*
+import org.typelevel.sbt.TypelevelKernelPlugin.autoImport.*
+import org.typelevel.sbt.TypelevelSettingsPlugin
 import sbt.*
 import sbt.Keys.*
 
@@ -35,8 +37,13 @@ object BouncyCastlePlugin extends AutoPlugin {
   )
 
   private val commonSettings = Seq(
-    addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.13.2" cross CrossVersion.full),
-    addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
+    libraryDependencies ++= {
+      if (tlIsScala3.value) Seq.empty
+      else Seq(
+        compilerPlugin("org.typelevel" %% "kind-projector" % "0.13.2" cross CrossVersion.full),
+        compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
+      )
+    },
     Compile / scalacOptions ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2, n)) if n >= 13 => "-Ymacro-annotations" :: Nil
@@ -45,8 +52,8 @@ object BouncyCastlePlugin extends AutoPlugin {
     },
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, n)) if n >= 13 => Nil
-        case _ => compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full) :: Nil
+        case Some((2, n)) if n < 13 => compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full) :: Nil
+        case _ => Nil
       }
     },
   )
@@ -74,12 +81,12 @@ object BouncyCastlePlugin extends AutoPlugin {
           Seq(
             "org.typelevel" %% "cats-core" % "2.10.0",
             "org.typelevel" %% "cats-effect" % "3.5.1",
-            "co.fs2" %% "fs2-core" % "3.8.0",
-            "co.fs2" %% "fs2-io" % "3.8.0",
-            "com.chuusai" %% "shapeless" % "2.3.10",
+            "co.fs2" %% "fs2-core" % "3.9.2",
+            "co.fs2" %% "fs2-io" % "3.9.2",
+            "io.monix" %% "newtypes-core" % "0.2.3",
             "org.scala-lang.modules" %% "scala-collection-compat" % "2.11.0",
             "org.typelevel" %% "log4cats-core" % "2.6.0",
-            "eu.timepit" %% "refined" % "0.10.3",
+            "eu.timepit" %% "refined" % "0.11.0",
             bouncyCastle,
           )
         },
@@ -98,6 +105,7 @@ object BouncyCastlePlugin extends AutoPlugin {
         }
       )
       .settings(commonSettings)
+      .enablePlugins(TypelevelSettingsPlugin)
 
     val testkit = project
       .in(adjustedFile("testkit"))
@@ -110,7 +118,7 @@ object BouncyCastlePlugin extends AutoPlugin {
         libraryDependencies ++= {
           Seq(
             "org.scalacheck" %% "scalacheck" % "1.17.0",
-            "eu.timepit" %% "refined-scalacheck" % "0.10.3",
+            "eu.timepit" %% "refined-scalacheck" % "0.11.0",
             "io.chrisdavenport" %% "cats-scalacheck" % "0.3.2",
           )
         },
@@ -121,6 +129,7 @@ object BouncyCastlePlugin extends AutoPlugin {
       )
       .dependsOn(core)
       .settings(commonSettings)
+      .enablePlugins(TypelevelSettingsPlugin)
 
     val tests = project
       .in(adjustedFile("tests"))
@@ -131,6 +140,8 @@ object BouncyCastlePlugin extends AutoPlugin {
         libraryDependencies ++= {
           Seq(
             "org.typelevel" %% "log4cats-noop" % "2.6.0" % Test,
+            "org.typelevel" %% "log4cats-slf4j" % "2.6.0" % Test,
+            "ch.qos.logback" % "logback-classic" % "1.4.7" % Test,
             "org.scalameta" %% "munit" % "0.7.29" % Test,
             "org.typelevel" %% "scalacheck-effect" % "1.0.4" % Test,
             "org.typelevel" %% "scalacheck-effect-munit" % "1.0.4" % Test,
@@ -144,6 +155,7 @@ object BouncyCastlePlugin extends AutoPlugin {
       )
       .dependsOn(core, testkit)
       .settings(commonSettings)
+      .enablePlugins(TypelevelSettingsPlugin)
 
     (core, testkit, tests)
   }
@@ -156,14 +168,6 @@ object BouncyCastlePlugin extends AutoPlugin {
     List(c, tk, t)
   }
 
-  // TODO can we get rid of this project by adding the aggregated projects to the root project?
-  lazy val aggregate = Project("aggregate", file(".aggregate"))
-    .aggregate((List(core, testkit, tests) ++ oldVersionProjects).map(p => LocalProject(p.id)) *)
-    .settings(
-      publishArtifact := false,
-      publish / skip := true,
-    )
-
   override lazy val extraProjects: Seq[Project] =
-    Seq(aggregate, core, testkit, tests) ++ oldVersionProjects
+    Seq(core, testkit, tests) ++ oldVersionProjects
 }

@@ -1,11 +1,12 @@
 package com.dwolla.security.crypto
 
 import java.security.Security
-import cats.effect._
-import cats.syntax.all._
+import cats.effect.*
+import cats.syntax.all.*
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 
 import java.util.concurrent.atomic.AtomicInteger
+import scala.annotation.nowarn
 
 sealed trait BouncyCastleResource
 object BouncyCastleResource {
@@ -13,6 +14,10 @@ object BouncyCastleResource {
 
   private def register(provider: BouncyCastleProvider): Unit =
     synchronized {
+      @nowarn("msg=discarded non-Unit value of type Int")
+      def increment(): Unit =
+        timesBouncyCastleHasBeenRegistered.incrementAndGet()
+
       val previousCount = timesBouncyCastleHasBeenRegistered.getAndIncrement()
       val position = Security.addProvider(provider)
 
@@ -24,7 +29,7 @@ object BouncyCastleResource {
        * go out of scope.
        */
       if (position == -1 && previousCount == 0)
-        timesBouncyCastleHasBeenRegistered.incrementAndGet()
+        increment()
 
       ()
     }

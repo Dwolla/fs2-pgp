@@ -14,9 +14,9 @@ import org.bouncycastle.openpgp.operator.jcajce.{JcaPGPContentSignerBuilder, Jca
 import org.scalacheck.Arbitrary
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.effect.PropF.forAllF
-import org.typelevel.log4cats._
-import org.typelevel.log4cats.noop.NoOpLogger
 import com.eed3si9n.expecty.Expecty.{assert => Assert}
+import org.typelevel.log4cats.LoggerFactory
+import org.typelevel.log4cats.slf4j.Slf4jFactory
 
 import scala.jdk.CollectionConverters._
 
@@ -25,10 +25,8 @@ class PGPKeyAlgSpec
     with ScalaCheckEffectSuite
     with PgpArbitraries
     with CryptoArbitraries {
-  private implicit val L: LoggerFactory[IO] = new LoggerFactory[IO] {
-    override def getLoggerFromName(name: String): SelfAwareStructuredLogger[IO] = NoOpLogger[IO]
-    override def fromName(name: String): IO[SelfAwareStructuredLogger[IO]] = NoOpLogger[IO].pure[IO]
-  }
+
+  private implicit val loggerFactory: LoggerFactory[IO] = Slf4jFactory.create[IO]
 
   test("PGPKeyAlg should load a PGPPublicKey from armored public key") {
     val key =
@@ -87,9 +85,9 @@ class PGPKeyAlgSpec
       val testResource = keyR.evalMap { key =>
         val armored: IO[String] =
           (for {
-            crypto <- Stream.resource(CryptoAlg[IO])
+            crypto <- Stream.resource(CryptoAlg.resource[IO])
             armored <- Stream.emits(key.getEncoded)
-              .through(crypto.armor())
+              .through(crypto.armor)
               .through(text.utf8.decode)
           } yield armored).compile.resource.string.use(s => s.pure[IO])
 
@@ -114,7 +112,7 @@ class PGPKeyAlgSpec
       val testResource = kp.evalMap { keyPair =>
         val armoredKey =
           (for {
-            crypto <- CryptoAlg[IO]
+            crypto <- CryptoAlg.resource[IO]
             secretKey <- Resource.eval(IO.blocking {
               val sha1Calc: PGPDigestCalculator = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1)
               new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, "identity", sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA256), new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256, sha1Calc).setProvider("BC").build(passphrase))
@@ -123,7 +121,7 @@ class PGPKeyAlgSpec
               readOutputStream(4096) { os =>
                 IO.blocking(secretKey.encode(os))
               }
-                .through(crypto.armor())
+                .through(crypto.armor)
                 .through(text.utf8.decode)
                 .compile
                 .resource
@@ -148,16 +146,16 @@ class PGPKeyAlgSpec
       val testResource = kp.evalMap { keyPair =>
         val armoredKey =
           (for {
-            crypto <- CryptoAlg[IO]
+            crypto <- CryptoAlg.resource[IO]
             secretKey <- Resource.eval(IO.blocking {
               val sha1Calc: PGPDigestCalculator = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1)
               new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, "identity", sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey.getAlgorithm, HashAlgorithmTags.SHA256), new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256, sha1Calc).setProvider("BC").build(passphrase))
             })
             armoredKey <-
-              readOutputStream(chunkSize.value) { os =>
+              readOutputStream(chunkSize.unrefined) { os =>
                 IO.blocking(secretKey.encode(os))
               }
-                .through(crypto.armor())
+                .through(crypto.armor)
                 .through(text.utf8.decode)
                 .compile
                 .resource
