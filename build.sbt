@@ -1,14 +1,14 @@
 lazy val V = new {
   val SCALA_2_12 = "2.12.18"
-  val SCALA_2_13 = "2.13.11"
-  val SCALA_3 = "3.3.0"
+  val SCALA_2_13 = "2.13.12"
+  val SCALA_3 = "3.3.1"
   val Scalas = Seq(SCALA_3, SCALA_2_13, SCALA_2_12)
 }
 
 ThisBuild / scalaVersion := V.Scalas.head
 ThisBuild / crossScalaVersions := V.Scalas
-ThisBuild / organization := "com.dwolla"
-ThisBuild / homepage := Option(url("https://github.com/Dwolla/fs2-pgp"))
+ThisBuild / organization := "net.tazato"
+ThisBuild / homepage := Option(url("https://github.com/CJSmith-0141/fs2-pgp"))
 ThisBuild / licenses += ("MIT", url("http://opensource.org/licenses/MIT"))
 ThisBuild / startYear := Option(2020)
 ThisBuild / developers := List(
@@ -17,6 +17,12 @@ ThisBuild / developers := List(
     "Brian Holt",
     "bholt@dwolla.com",
     url("https://dwolla.com")
+  ),
+  Developer(
+    "CJSmith-0141",
+    "CJ Smith",
+    "connor.smith1@octoenergy.com",
+    url("https://tazato.net")
   )
 )
 ThisBuild / githubWorkflowBuild := Seq(WorkflowStep.Sbt(List("test", "mimaReportBinaryIssues", "doc")))
