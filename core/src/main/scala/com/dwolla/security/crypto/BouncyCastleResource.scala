@@ -10,7 +10,8 @@ import scala.annotation.nowarn
 
 sealed trait BouncyCastleResource
 object BouncyCastleResource {
-  private val timesBouncyCastleHasBeenRegistered: AtomicInteger = new AtomicInteger(0)
+  private val timesBouncyCastleHasBeenRegistered: AtomicInteger =
+    new AtomicInteger(0)
 
   private def register(provider: BouncyCastleProvider): Unit =
     synchronized {
@@ -19,7 +20,7 @@ object BouncyCastleResource {
         timesBouncyCastleHasBeenRegistered.incrementAndGet()
 
       val previousCount = timesBouncyCastleHasBeenRegistered.getAndIncrement()
-      val position = Security.addProvider(provider)
+      val position      = Security.addProvider(provider)
 
       /*
        * If BouncyCastle was already registered (as indicated by the returned
@@ -42,16 +43,18 @@ object BouncyCastleResource {
         Security.removeProvider(name)
     }
 
-  def apply[F[_] : Sync]: Resource[F, BouncyCastleResource] = {
+  def apply[F[_]: Sync]: Resource[F, BouncyCastleResource] = {
     def registerBouncyCastle: F[String] =
       for {
         provider <- Sync[F].blocking(new BouncyCastleProvider)
-        _ <- Sync[F].blocking(register(provider))
+        _        <- Sync[F].blocking(register(provider))
       } yield provider.getName
 
     def removeBouncyCastle(name: String): F[Unit] =
       Sync[F].blocking(deregister(name))
 
-    Resource.make(registerBouncyCastle)(removeBouncyCastle).as(new BouncyCastleResource {})
+    Resource
+      .make(registerBouncyCastle)(removeBouncyCastle)
+      .as(new BouncyCastleResource {})
   }
 }

@@ -28,9 +28,9 @@ sealed trait Compression {
 
 object Compression {
   case object Uncompressed extends Compression { override val tag: Int = 0 }
-  case object Zip extends Compression { override val tag: Int = 1 }
-  case object Zlib extends Compression { override val tag: Int = 2 }
-  case object Bzip2 extends Compression { override val tag: Int = 3 }
+  case object Zip          extends Compression { override val tag: Int = 1 }
+  case object Zlib         extends Compression { override val tag: Int = 2 }
+  case object Bzip2        extends Compression { override val tag: Int = 3 }
 }
 
 sealed trait PgpLiteralDataPacketFormat {
@@ -38,7 +38,13 @@ sealed trait PgpLiteralDataPacketFormat {
 }
 
 object PgpLiteralDataPacketFormat {
-  case object Binary extends PgpLiteralDataPacketFormat { override val tag: Char = PGPLiteralData.BINARY }
-  case object Text extends PgpLiteralDataPacketFormat { override val tag: Char = PGPLiteralData.TEXT }
-  case object Utf8 extends PgpLiteralDataPacketFormat { override val tag: Char = PGPLiteralData.UTF8 }
+  case object Binary extends PgpLiteralDataPacketFormat {
+    override val tag: Char = PGPLiteralData.BINARY
+  }
+  case object Text extends PgpLiteralDataPacketFormat {
+    override val tag: Char = PGPLiteralData.TEXT
+  }
+  case object Utf8 extends PgpLiteralDataPacketFormat {
+    override val tag: Char = PGPLiteralData.UTF8
+  }
 }
