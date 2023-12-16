@@ -32,13 +32,11 @@ ThisBuild / tlJdkRelease                := Option(8)
 ThisBuild / githubWorkflowJavaVersions  := Seq(JavaSpec.temurin("17"))
 ThisBuild / githubWorkflowScalaVersions := Seq("3", "2.13", "2.12")
 ThisBuild / tlCiReleaseBranches         := Seq("main")
-ThisBuild / tlBaseVersion               := "0.5.1"
+ThisBuild / tlBaseVersion               := "0.6"
 ThisBuild / tlSonatypeUseLegacyHost     := false
-ThisBuild / mergifyStewardConfig ~= {
-  _.map(_.copy(mergeMinors = true, author = "dwolla-oss-scala-steward[bot]"))
-}
 
 lazy val `fs2-pgp-root` = (project in file("."))
   .settings(publishArtifact := false)
   .enablePlugins(BouncyCastlePlugin)
+  .enablePlugins(TypelevelCiReleasePlugin)
   .aggregate(BouncyCastlePlugin.extraProjects.map(_.project)*)
