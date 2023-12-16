@@ -31,7 +31,7 @@ ThisBuild / tlJdkRelease                := Option(8)
 ThisBuild / githubWorkflowJavaVersions  := Seq(JavaSpec.temurin("17"))
 ThisBuild / githubWorkflowScalaVersions := Seq("3", "2.13")
 ThisBuild / tlCiReleaseBranches         := Seq("main")
-ThisBuild / tlBaseVersion               := "0.6"
+ThisBuild / tlBaseVersion               := "0.5"
 ThisBuild / tlSonatypeUseLegacyHost     := false
 
 lazy val `fs2-pgp-root` = (project in file("."))
