@@ -56,15 +56,6 @@ object BouncyCastlePlugin extends AutoPlugin {
         case Some((2, n)) if n >= 13 => "-Ymacro-annotations" :: Nil
         case _                       => Nil
       }
-    },
-    libraryDependencies ++= {
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, n)) if n < 13 =>
-          compilerPlugin(
-            "org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full
-          ) :: Nil
-        case _ => Nil
-      }
     }
   )
 

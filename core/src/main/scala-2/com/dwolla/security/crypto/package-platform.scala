@@ -13,20 +13,23 @@ package object crypto {
   type ChunkSize = ChunkSize.Type
   object ChunkSize extends NewtypeWrapped[PosInt]
 
-  def attemptTagChunkSize(pi: Int): Either[String, ChunkSize] = refineV[Positive](pi).map(ChunkSize(_))
+  def attemptTagChunkSize(pi: Int): Either[String, ChunkSize] =
+    refineV[Positive](pi).map(ChunkSize(_))
 
-  val defaultChunkSize: ChunkSize = ChunkSize(4096)
+  val defaultChunkSize: ChunkSize                        = ChunkSize(4096)
   private[crypto] val objectIteratorChunkSize: ChunkSize = ChunkSize(1)
 
-  implicit class RefinedNewtypeOps[RNT](val refinedNewtype: RNT) extends AnyVal {
+  implicit class RefinedNewtypeOps[RNT](val refinedNewtype: RNT)
+      extends AnyVal {
     def unrefined[X, R[_, _], T, P](implicit
-                                    ex: HasExtractor.Aux[RNT, X],
-                                    x: X =:= R[T, P],
-                                    rt: RefType[R],
-                                   ): T = {
+        ex: HasExtractor.Aux[RNT, X],
+        x: X =:= R[T, P],
+        rt: RefType[R]
+    ): T = {
       rt.unwrap(x(ex.extract(refinedNewtype)))
     }
   }
 
-  private[crypto] implicit def SLogger[F[_] : Logger]: Logger[Stream[F, *]] = Logger[F].mapK(Stream.functionKInstance[F])
+  private[crypto] implicit def SLogger[F[_]: Logger]: Logger[Stream[F, *]] =
+    Logger[F].mapK(Stream.functionKInstance[F])
 }
