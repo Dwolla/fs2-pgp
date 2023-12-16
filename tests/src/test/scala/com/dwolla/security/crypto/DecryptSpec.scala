@@ -6,12 +6,13 @@ import munit.CatsEffectSuite
 import org.typelevel.log4cats._
 import org.typelevel.log4cats.slf4j.Slf4jFactory
 
-class DecryptSpec
-  extends CatsEffectSuite {
+class DecryptSpec extends CatsEffectSuite {
 
-  private implicit val loggerFactory: LoggerFactory[IO] = Slf4jFactory.create[IO]
+  private implicit val loggerFactory: LoggerFactory[IO] =
+    Slf4jFactory.create[IO]
 
-  private val resource: Fixture[CryptoAlg[IO]] = ResourceSuiteLocalFixture("CryptoAlg[IO]", CryptoAlg.resource[IO])
+  private val resource: Fixture[CryptoAlg[IO]] =
+    ResourceSuiteLocalFixture("CryptoAlg[IO]", CryptoAlg.resource[IO])
 
   override def munitFixtures: Seq[Fixture[_]] = List(resource)
 
@@ -23,7 +24,9 @@ class DecryptSpec
    *  > pbpaste | gpg --import
    *  > echo "Hello World" | gpg --encrypt --armor --hidden-recipient "key 1 <key1@dwolla.com>"
    */
-  test("CryptoAlg should decrypt cryptotext with a hidden recipient using secret key collection") {
+  test(
+    "CryptoAlg should decrypt cryptotext with a hidden recipient using secret key collection"
+  ) {
     val crypto = resource()
 
     val message =
@@ -65,7 +68,9 @@ class DecryptSpec
    *  > pbpaste | gpg --import
    *  > echo "Hello World" | gpg --encrypt --armor --recipient "key 1 <key1@dwolla.com>"
    */
-  test("CryptoAlg should decrypt cryptotext with a known recipient using secret key collection") {
+  test(
+    "CryptoAlg should decrypt cryptotext with a known recipient using secret key collection"
+  ) {
     val crypto = resource()
 
     val message =
@@ -107,7 +112,9 @@ class DecryptSpec
    *  > pbpaste | gpg --import
    *  > echo "Hello World" | gpg --encrypt --armor --hidden-recipient "key 1 <key1@dwolla.com>"
    */
-  test("CryptoAlg should decrypt cryptotext with a hidden recipient using private key") {
+  test(
+    "CryptoAlg should decrypt cryptotext with a hidden recipient using private key"
+  ) {
     val crypto = resource()
 
     val message =
@@ -149,7 +156,9 @@ class DecryptSpec
    *  > pbpaste | gpg --import
    *  > echo "Hello World" | gpg --encrypt --armor --recipient "key 1 <key1@dwolla.com>"
    */
-  test("CryptoAlg should decrypt cryptotext with a known recipient using private key") {
+  test(
+    "CryptoAlg should decrypt cryptotext with a known recipient using private key"
+  ) {
     val crypto = resource()
 
     val message =
@@ -193,7 +202,9 @@ class DecryptSpec
    *  > pbpaste | gpg --import
    *  > echo "Hello World" | gpg --encrypt --armor --recipient "key 2 <key2@dwolla.com> --recipient "key 1 <key1@dwolla.com>"
    */
-  test("CryptoAlg should decrypt cryptotext with multiple recipients using secret key collection") {
+  test(
+    "CryptoAlg should decrypt cryptotext with multiple recipients using secret key collection"
+  ) {
     val crypto = resource()
 
     val message =
