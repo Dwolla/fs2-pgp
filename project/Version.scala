@@ -21,10 +21,8 @@
 
 import scala.util.Try
 
-final case class Version(major: Int,
-                         minor: Int,
-                         patch: Option[Int]
-                        ) extends Ordered[Version] {
+final case class Version(major: Int, minor: Int, patch: Option[Int])
+    extends Ordered[Version] {
 
   override def toString: String =
     s"$major.$minor${patch.fold("")(p => s".$p")}"
@@ -45,8 +43,10 @@ final case class Version(major: Int,
     if (y != 0) return y
     (this.patch, that.patch) match {
       case (None, None) => 0
-      case (None, Some(patch)) => ThatGreater // a version with a patch comes after a version without a patch
-      case (Some(patch), None) => ThisGreater // a version with a patch comes after a version without a patch
+      case (None, Some(patch)) =>
+        ThatGreater // a version with a patch comes after a version without a patch
+      case (Some(patch), None) =>
+        ThisGreater // a version with a patch comes after a version without a patch
       case (Some(thisPatch), Some(thatPatch)) =>
         thisPatch.compare(thatPatch)
     }
@@ -61,7 +61,9 @@ object Version {
 
   def unapply(v: String): Option[Version] = v match {
     case version(major, minor, patch) =>
-      Try(Version(major.toInt, minor.toInt, Option(patch).map(_.toInt))).toOption
+      Try(
+        Version(major.toInt, minor.toInt, Option(patch).map(_.toInt))
+      ).toOption
     case _ => None
   }
 

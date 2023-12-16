@@ -17,17 +17,28 @@ trait Armor[F[_]] {
 
 object Armor {
   @nowarn("""msg=parameter (?:value )?ev in method apply is never used""")
-  def apply[F[_] : Async](implicit ev: BouncyCastleResource): Armor[F] = new Armor[F] {
-    private val closeStreamsAfterUse = false
+  def apply[F[_]: Async](implicit ev: BouncyCastleResource): Armor[F] =
+    new Armor[F] {
+      private val closeStreamsAfterUse = false
 
-    override def armor(chunkSize: ChunkSize): Pipe[F, Byte, Byte] = bytes =>
-      readOutputStream(chunkSize.unrefined) { out =>
-        Stream.resource(Resource.fromAutoCloseable(Sync[F].blocking(new ArmoredOutputStream(out))))
-          .flatMap { armorer =>
-            bytes.through(writeOutputStream(armorer.pure[F].widen[OutputStream], closeStreamsAfterUse))
-          }
-          .compile
-          .drain
-      }
-  }
+      override def armor(chunkSize: ChunkSize): Pipe[F, Byte, Byte] = bytes =>
+        readOutputStream(chunkSize.unrefined) { out =>
+          Stream
+            .resource(
+              Resource.fromAutoCloseable(
+                Sync[F].blocking(new ArmoredOutputStream(out))
+              )
+            )
+            .flatMap { armorer =>
+              bytes.through(
+                writeOutputStream(
+                  armorer.pure[F].widen[OutputStream],
+                  closeStreamsAfterUse
+                )
+              )
+            }
+            .compile
+            .drain
+        }
+    }
 }

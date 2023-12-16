@@ -18,27 +18,31 @@ trait PgpArbitraries extends PgpArbitrariesPlatform {
   type KeySize = Int Refined KeySizePred
   object KeySize extends RefinedTypeOps.Numeric[KeySize, Int]
 
-  implicit def arbPgpPublicKey[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Arbitrary[Resource[F, PGPPublicKey]] = Arbitrary {
+  implicit def arbPgpPublicKey[F[_]](implicit
+      A: Arbitrary[Resource[F, PGPKeyPair]]
+  ): Arbitrary[Resource[F, PGPPublicKey]] = Arbitrary {
     arbitrary[Resource[F, PGPKeyPair]].map(_.map(_.getPublicKey))
   }
 
-  implicit def arbPgpPrivateKey[F[_]](implicit A: Arbitrary[Resource[F, PGPKeyPair]]): Arbitrary[Resource[F, PGPPrivateKey]] = Arbitrary {
+  implicit def arbPgpPrivateKey[F[_]](implicit
+      A: Arbitrary[Resource[F, PGPKeyPair]]
+  ): Arbitrary[Resource[F, PGPPrivateKey]] = Arbitrary {
     arbitrary[Resource[F, PGPKeyPair]].map(_.map(_.getPrivateKey))
   }
 
-  def genStrongKeyPair[F[_] : Sync]: Gen[Resource[F, PGPKeyPair]] =
+  def genStrongKeyPair[F[_]: Sync]: Gen[Resource[F, PGPKeyPair]] =
     for {
       keySize <- Gen.oneOf[KeySize](KeySize2048, KeySize4096)
       keyPair <- genKeyPair[F](keySize)
     } yield keyPair
 
-  def arbWeakKeyPair[F[_] : Sync]: Arbitrary[Resource[F, PGPKeyPair]] =
+  def arbWeakKeyPair[F[_]: Sync]: Arbitrary[Resource[F, PGPKeyPair]] =
     Arbitrary(genWeakKeyPair)
 
-  def genWeakKeyPair[F[_] : Sync]: Gen[Resource[F, PGPKeyPair]] =
+  def genWeakKeyPair[F[_]: Sync]: Gen[Resource[F, PGPKeyPair]] =
     genKeyPair[F](KeySize512)
 
-  def genKeyPair[F[_] : Sync](keySize: KeySize): Gen[Resource[F, PGPKeyPair]] =
+  def genKeyPair[F[_]: Sync](keySize: KeySize): Gen[Resource[F, PGPKeyPair]] =
     BouncyCastleResource[F]
       .evalMap { _ =>
         for {
