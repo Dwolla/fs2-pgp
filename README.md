@@ -9,8 +9,8 @@ A library for encrypting and decrypting fs2 `Stream[F, Byte]` using PGP.
 <th>Description</th>
 <th align="center">Cats Effect Version</th>
 <th align="center">fs2 Version</th>
-<th align="center">Scala 2.12</th>
 <th align="center">Scala 2.13</th>
+<th align="center">Scala 3</th>
 </tr>
 </thead>
 <tbody>
@@ -32,6 +32,14 @@ A library for encrypting and decrypting fs2 `Stream[F, Byte]` using PGP.
 </tr>
 </tbody>
 </table>
+
+## Supported Scala Versions
+
+| Versions        | Scala 2.12         | Scala 2.13         | Scala 3            |
+|:----------------|:------------------:|:------------------:|:------------------:|
+| `fs2-pgp 0.4.x` | :white_check_mark: | :white_check_mark: | :x:                |
+| `fs2-pgp 0.5.x` | :x:                | :white_check_mark: | :white_check_mark: |
+    
 
 ## Bouncy Castle Versions
 
@@ -105,11 +113,11 @@ import org.bouncycastle.openpgp._
 val key: PGPPublicKey = ??? // from above
 
 (for {
-  crypto <- Stream.resource(CryptoAlg[IO])
+  crypto <- Stream.resource(CryptoAlg.resource[IO])
   output <- Stream.emit("hello world")
                   .through(utf8.encode)
                   .through(crypto.encrypt(key))
-                  .through(crypto.armor())
+                  .through(crypto.armor)
                   .through(utf8.decode)
 } yield output).compile.string.unsafeRunSync()
 val res1: String =
