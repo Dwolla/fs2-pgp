@@ -6,8 +6,8 @@ lazy val V = new {
 
 ThisBuild / scalaVersion       := V.Scalas.head
 ThisBuild / crossScalaVersions := V.Scalas
-ThisBuild / organization       := "net.tazato"
-ThisBuild / homepage := Option(url("https://github.com/CJSmith-0141/fs2-pgp"))
+ThisBuild / organization       := "com.dwolla"
+ThisBuild / homepage := Option(url("https://github.com/dwolla/fs2-pgp"))
 ThisBuild / licenses += ("MIT", url("http://opensource.org/licenses/MIT"))
 ThisBuild / startYear := Option(2020)
 ThisBuild / developers := List(
@@ -21,7 +21,7 @@ ThisBuild / developers := List(
     "CJSmith-0141",
     "CJ Smith",
     "connor.smith1@octoenergy.com",
-    url("https://tazato.net")
+    url("https://kraken.tech")
   )
 )
 ThisBuild / githubWorkflowBuild := Seq(
@@ -32,7 +32,7 @@ ThisBuild / githubWorkflowJavaVersions  := Seq(JavaSpec.temurin("17"))
 ThisBuild / githubWorkflowScalaVersions := Seq("3", "2.13")
 ThisBuild / tlCiReleaseBranches         := Seq("main")
 ThisBuild / tlBaseVersion               := "0.5"
-ThisBuild / tlSonatypeUseLegacyHost     := false
+ThisBuild / tlSonatypeUseLegacyHost     := true 
 
 lazy val `fs2-pgp-root` = (project in file("."))
   .settings(publishArtifact := false)
