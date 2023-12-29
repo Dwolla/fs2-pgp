@@ -8,7 +8,7 @@ ThisBuild / scalaVersion := V.Scalas.head
 ThisBuild / crossScalaVersions := V.Scalas
 ThisBuild / organization := "com.dwolla"
 ThisBuild / homepage := Option(url("https://github.com/Dwolla/fs2-pgp"))
-ThisBuild / licenses += ("MIT", url("http://opensource.org/licenses/MIT"))
+ThisBuild / licenses += ("MIT", url("https://opensource.org/licenses/MIT"))
 ThisBuild / startYear := Option(2020)
 ThisBuild / developers := List(
   Developer(
@@ -22,7 +22,7 @@ ThisBuild / githubWorkflowBuild := Seq(WorkflowStep.Sbt(List("test", "mimaReport
 ThisBuild / tlJdkRelease := Option(8)
 ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("17"))
 ThisBuild / githubWorkflowScalaVersions := Seq("2.13", "2.12")
-ThisBuild / tlCiReleaseBranches := Seq("main")
+ThisBuild / tlCiReleaseBranches := Seq("main", "series/0.5")
 ThisBuild / tlBaseVersion := "0.4"
 ThisBuild / tlSonatypeUseLegacyHost := true
 ThisBuild / mergifyStewardConfig ~= {
