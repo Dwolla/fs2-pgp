@@ -25,6 +25,30 @@ pull_request_rules:
       add:
       - core
       remove: []
+- name: Label input PRs
+  conditions:
+  - files~=^scalafix/input/
+  actions:
+    label:
+      add:
+      - input
+      remove: []
+- name: Label output PRs
+  conditions:
+  - files~=^scalafix/output/
+  actions:
+    label:
+      add:
+      - output
+      remove: []
+- name: Label rules PRs
+  conditions:
+  - files~=^scalafix/rules/
+  actions:
+    label:
+      add:
+      - rules
+      remove: []
 - name: Label testkit PRs
   conditions:
   - files~=^testkit/
@@ -35,7 +59,7 @@ pull_request_rules:
       remove: []
 - name: Label tests PRs
   conditions:
-  - files~=^tests/
+  - files~=^/
   actions:
     label:
       add:
