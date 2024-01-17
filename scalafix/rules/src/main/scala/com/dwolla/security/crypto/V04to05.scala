@@ -1,9 +1,9 @@
-package fix
+package com.dwolla.security.crypto
 
-import scalafix.v1._
-import scala.meta._
+import scalafix.v1.*
+import scala.meta.*
 
-class Fs2Pgp extends SemanticRule("Fs2Pgp") {
+class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
 
   override def fix(implicit doc: SemanticDocument): Patch = {
     doc.tree.collect {

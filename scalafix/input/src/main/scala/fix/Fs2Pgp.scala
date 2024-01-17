@@ -1,6 +1,6 @@
 package fix
 /*
-rule = Fs2Pgp
+rule = com.dwolla.security.crypto.V04to05
 */
 import cats.effect._
 import cats.syntax.all._
