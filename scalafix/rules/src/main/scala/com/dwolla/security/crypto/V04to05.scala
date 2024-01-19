@@ -6,29 +6,25 @@ import scala.meta.*
 
 class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
 
-  override def fix(implicit doc: SemanticDocument): Patch = {
-    Patch.replaceSymbols(
-      "com.dwolla.security.crypto.tagChunkSize" -> "com.dwolla.security.crypto.ChunkSize"
-    ) ++
+  override def fix(implicit doc: SemanticDocument): Patch =
     doc.tree.collect {
+      case t@Term.Apply.After_4_6_0(Term.Name("tagChunkSize"), _) =>
+        Patch.renameSymbol(t.symbol, "ChunkSize")
       case t@Term.ApplyType.After_4_6_0(Term.Name("CryptoAlg"), Type.ArgClause(List(Type.Name(name)))) =>
         Patch.replaceTree(t, s"CryptoAlg.resource[$name]").atomic
       case t@Term.Apply.After_4_6_0(Term.Select(Term.Name(name), Term.Name("armor")), Term.ArgClause(List(), None)) =>
         Patch.replaceTree(t, s"$name.armor").atomic
-      case t@
-        Term.Apply.After_4_6_0(
-          Term.Select(Term.Name(cryptoRName), fun@Term.Name("encrypt")),
-            Term.ArgClause(
-            (keyName@Term.Name(_)) :: additionalArguments,
-            None
-          )
-        ) => migrateEncrypt(t, fun, additionalArguments, cryptoRName, Some(keyName), offset = 1)
       case t@Term.Apply.After_4_6_0(
-        Term.Select(Term.Name(cryptoRName), fun@Term.Name("encrypt")),
+        Term.Select(Term.Name(algName), fun@Term.Name("encrypt")),
+        Term.ArgClause((keyName@Term.Name(_)) :: additionalArguments, None)
+      ) =>
+        migrateEncrypt(t, fun, additionalArguments, algName, Some(keyName), offset = 1)
+      case t@Term.Apply.After_4_6_0(
+        Term.Select(Term.Name(algName), fun@Term.Name("encrypt")),
         Term.ArgClause(arguments, None)
-      ) => migrateEncrypt(t, fun, arguments, cryptoRName, None, offset = 0)
-    }
-  }
+      ) =>
+        migrateEncrypt(t, fun, arguments, algName, None, offset = 0)
+    }.asPatch
 
   private def migrateEncrypt(t: Term,
                              fun: Term.Name,
@@ -40,12 +36,9 @@ class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
                             (implicit doc: SemanticDocument): Patch = {
     val map = arguments.zipWithIndex.foldLeft(keyName.map("key" -> _).toList) {
       case (s, (Term.Assign(Term.Name("key"), term), _)) => s :+ ("key" -> term)
-      case (s, (Term.Assign(Term.Name("fileName"), term), _)) => s :+ ("FileName" -> term)
-      case (s, (Term.Assign(Term.Name("chunkSize"), term), _)) => s :+ ("ChunkSize" -> term)
-      case (s, (Term.Assign(Term.Name("encryption"), term), _)) => s :+ ("Encryption" -> term)
-      case (s, (Term.Assign(Term.Name("compression"), term), _)) => s :+ ("Compression" -> term)
-      case (s, (Term.Assign(Term.Name("packetFormat"), term), _)) => s :+ ("PacketFormat" -> term)
-      case (s, (Term.Assign(Term.Name("packetFormat"), term), _)) => s :+ ("PacketFormat" -> term)
+      case (s, (Term.Assign(Term.Name("chunkSize"), Term.Apply.After_4_6_0(Term.Name("tagChunkSize"), Term.ArgClause(List(term), _))), _)) =>
+        s :+ ("ChunkSize" -> term)
+      case (s, (Term.Assign(Term.Name(name), term), _)) => s :+ (name.capitalize -> term)
       case (s, (value, i)) =>
         fun.symbol.info match {
           case Some(info) =>
@@ -54,8 +47,11 @@ class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
                 val parameter = method.parameterLists.head(i + offset)
                 val parameterName = parameter.displayName
 
-                s :+ (parameterName.capitalize -> value)
-              case _ => s
+                s :+ (parameterName.capitalize -> (value match {
+                  case Term.Apply.After_4_6_0(Term.Name("tagChunkSize"), Term.ArgClause(List(term), _)) =>
+                    Term.Apply(Term.Name("ChunkSize"), Term.ArgClause(List(term)))
+                  case _ => value
+                }))
             }
           case _ => s
         }
@@ -64,6 +60,7 @@ class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
 
     val key = map.toMap.apply("key")
 
+    // TODO maybe try replacing the specific arguments instead of the entire tree?
     Patch.replaceTree(t, map.filterNot {
       case ("key", _) => true
       case _ => false
