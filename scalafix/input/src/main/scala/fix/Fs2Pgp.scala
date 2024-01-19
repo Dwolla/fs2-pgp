@@ -10,6 +10,7 @@ import fs2._
 import fs2.text._
 import com.dwolla.security.crypto._
 import eu.timepit.refined.types.numeric.PosInt
+
 object Fs2Pgp {
   implicit val lf: LoggerFactory[IO] = org.typelevel.log4cats.noop.NoOpFactory.impl[IO]
   val key =

@@ -8,6 +8,8 @@ import fs2._
 import fs2.text._
 import com.dwolla.security.crypto._
 import eu.timepit.refined.types.numeric.PosInt
+import com.dwolla.security.crypto.ChunkSize
+
 object Fs2Pgp {
   implicit val lf: LoggerFactory[IO] = org.typelevel.log4cats.noop.NoOpFactory.impl[IO]
   val key =
@@ -42,8 +44,8 @@ object Fs2Pgp {
       |=TJUS
       |-----END PGP PUBLIC KEY BLOCK-----""".stripMargin
   val wrappedKey = PGPKeyAlg[IO].readPublicKey(key).unsafeRunSync()
-  val pos = PosInt.unsafeFrom(100)
-  val chunkSize = ChunkSize(PosInt.unsafeFrom(100))
+  val pos = PosInt(100)
+  val chunkSize = ChunkSize(PosInt(100))
   val chunkSize2 = ChunkSize(pos)
   (for {
     crypto <- Stream.resource(CryptoAlg.resource[IO])
