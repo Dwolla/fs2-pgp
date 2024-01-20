@@ -16,9 +16,25 @@ class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
         migrateEncrypt(t, fun, additionalArguments, Some(keyName), offset = 1)
       case Term.Apply.After_4_6_0(Term.Select(Term.Name(_), fun@Term.Name("encrypt")), t@Term.ArgClause(arguments, None)) =>
         migrateEncrypt(t, fun, arguments, None, offset = 0)
-//      case t@Term.Apply.After_4_6_0(Term.Name("tagChunkSize"), _) =>
-//        Patch.replaceToken(t.tokens.head, "ChunkSizeFromFix")
+      case t@Term.Apply.After_4_6_0(Term.Name("tagChunkSize"), _) if !isEncryptAParent(t) =>
+        Patch.replaceToken(t.tokens.head, "ChunkSize")
     }.asPatch
+  
+
+  private def isEncryptAParent(t: Tree): Boolean = {
+    val res = for {
+      firstParent <- t.parent
+      secondParent <- firstParent.parent
+      res = secondParent match {
+        case Term.Apply.After_4_6_0(Term.Select(_, Term.Name("encrypt")), _) => true
+        case _ => false
+      }
+    } yield res  
+    res match {
+      case None    => false
+      case Some(v) => v
+    } 
+  }
 
   private def migrateEncrypt(t: Term.ArgClause,
                              fun: Term.Name,
