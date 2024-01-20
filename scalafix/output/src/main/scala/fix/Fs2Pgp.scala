@@ -44,6 +44,7 @@ object Fs2Pgp {
       |-----END PGP PUBLIC KEY BLOCK-----""".stripMargin
   val wrappedKey = PGPKeyAlg[IO].readPublicKey(key).unsafeRunSync()
   val pos = PosInt(100)
+  val chunkSize = ChunkSize(pos)
 
   (for {
     crypto <- Stream.resource(CryptoAlg.resource[IO])
