@@ -87,7 +87,7 @@ object BouncyCastlePlugin extends AutoPlugin {
             "io.monix" %% "newtypes-core" % "0.2.3",
             "org.scala-lang.modules" %% "scala-collection-compat" % "2.11.0",
             "org.typelevel" %% "log4cats-core" % "2.6.0",
-            "eu.timepit" %% "refined" % "0.11.0",
+            "eu.timepit" %% "refined" % "0.11.1",
             bouncyCastle,
           )
         },
@@ -119,7 +119,7 @@ object BouncyCastlePlugin extends AutoPlugin {
         libraryDependencies ++= {
           Seq(
             "org.scalacheck" %% "scalacheck" % "1.17.0",
-            "eu.timepit" %% "refined-scalacheck" % "0.11.0",
+            "eu.timepit" %% "refined-scalacheck" % "0.11.1",
             "io.chrisdavenport" %% "cats-scalacheck" % "0.3.2",
           )
         },
