@@ -2,6 +2,7 @@ package com.dwolla.security.crypto
 
 import scalafix.v1.*
 
+import scala.annotation.tailrec
 import scala.meta.*
 
 class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
@@ -19,22 +20,14 @@ class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
       case t@Term.Apply.After_4_6_0(Term.Name("tagChunkSize"), _) if !isEncryptAParent(t) =>
         Patch.replaceToken(t.tokens.head, "ChunkSize")
     }.asPatch
-  
 
-  private def isEncryptAParent(t: Tree): Boolean = {
-    val res = for {
-      firstParent <- t.parent
-      secondParent <- firstParent.parent
-      res = secondParent match {
-        case Term.Apply.After_4_6_0(Term.Select(_, Term.Name("encrypt")), _) => true
-        case _ => false
-      }
-    } yield res  
-    res match {
-      case None    => false
-      case Some(v) => v
-    } 
-  }
+  @tailrec
+  private def isEncryptAParent(t: Tree): Boolean =
+    t.parent match {
+      case Some(Term.Apply.After_4_6_0(Term.Select(_, Term.Name("encrypt")), _)) => true
+      case Some(other) => isEncryptAParent(other)
+      case _ => false
+    }
 
   private def migrateEncrypt(t: Term.ArgClause,
                              fun: Term.Name,
@@ -63,20 +56,6 @@ class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
       case (s, _) => s
     }
 
-// TODO maybe try replacing the specific arguments instead of the entire tree?
-//    import scala.meta.tokens.Token.{Comma, Space}
-//    Patch.addLeft(arguments.head, "EncryptionConfig()") +
-//      sortKeyToEnd(map)
-//        .map {
-//          case ("key", t) => Patch.removeTokens(t.tokens)
-//          case (s, arg) =>
-//            t.tokens.foreach(t => println(s"${t.getClass} -> $t"))
-//            Patch.addAround(arg, s".with$s(", ")")
-//        }
-//        .asPatch +
-//      Patch.removeTokens(t.tokens.filter(_.is[Comma])) +
-//      Patch.addRight(arguments.last, s", ${map.toMap.apply("key")}")
-
     Patch.replaceTree(t, sortKeyToEnd(map).foldLeft(s"(EncryptionConfig()") {
       case (s, ("key", term)) => s + s", $term)"
       case (s, (argName, Term.Apply.After_4_6_0(Term.Name("tagChunkSize"), Term.ArgClause(List(term), _)))) => s + s".with$argName(ChunkSize($term))"
@@ -95,6 +74,4 @@ class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
 
     remainder :+ ("key" -> key)
   }
-
-
 }
