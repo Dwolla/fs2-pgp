@@ -50,6 +50,7 @@ class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
                 val parameterName = parameter.displayName
 
                 s :+ (parameterName.capitalize -> value)
+              case _ => throw new RuntimeException(s"Unexpected method signature ${info.signature} (how did the code being modified ever compile?)")
             }
           case _ => s
         }
@@ -58,9 +59,36 @@ class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
 
     Patch.replaceTree(t, sortKeyToEnd(map).foldLeft(s"(EncryptionConfig()") {
       case (s, ("key", term)) => s + s", $term)"
-      case (s, (argName, Term.Apply.After_4_6_0(Term.Name("tagChunkSize"), Term.ArgClause(List(term), _)))) => s + s".with$argName(ChunkSize($term))"
-      case (s, (argName, term)) => s + s".with$argName($term)"
+      case (s, (argName, term)) =>
+        tagChunkSizeTermReplacement(term)
+          .map(updatedChunkSize => s + s".with$argName($updatedChunkSize)")
+          .getOrElse(s + s".with$argName($term)")
     })
+  }
+
+  private def tagChunkSizeTermReplacement(term: Term): Option[String] = {
+    val chunkSizeTerms = term.collect {
+      case t@Term.Apply.After_4_6_0(Term.Name("tagChunkSize"), Term.ArgClause(List(_), _)) => t.pos
+    }
+
+    val updatedChunkSize =
+      chunkSizeTerms
+        .foldLeft(new StringBuilder) { case (acc, t) =>
+          val tokens = term.tokens.toString()
+
+          val replacementLength = "tagChunkSize".length
+          val start = t.start - term.pos.start + replacementLength
+          val end = tokens.length
+
+          acc
+            .append(tokens.slice(0, t.start - term.pos.start).mkString)
+            .append("ChunkSize")
+            .append(tokens.slice(start, end).mkString)
+        }
+        .toString()
+
+    if (chunkSizeTerms.isEmpty) None
+    else Some(updatedChunkSize)
   }
 
   private def sortKeyToEnd(terms: List[(String, Term)]): List[(String, Term)] = {
