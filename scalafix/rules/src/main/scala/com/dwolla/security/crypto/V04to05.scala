@@ -4,20 +4,21 @@ import scalafix.v1.*
 
 import scala.annotation.tailrec
 import scala.meta.*
+import scala.meta.inputs.Input.{File, VirtualFile}
 
 class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
 
   override def fix(implicit doc: SemanticDocument): Patch =
     doc.tree.collect {
-      case t@Term.ApplyType.After_4_6_0(Term.Name("CryptoAlg"), Type.ArgClause(List(Type.Name(name)))) =>
+      case t@Term.ApplyType.After_4_6_0(Term.Name("CryptoAlg"), Type.ArgClause(List(Type.Name(name)))) if t.symbol.normalized.value == "com.dwolla.security.crypto.CryptoAlg." =>
         Patch.replaceTree(t, s"CryptoAlg.resource[$name]").atomic
-      case t@Term.Apply.After_4_6_0(Term.Select(Term.Name(name), Term.Name("armor")), Term.ArgClause(List(), None)) =>
+      case t@Term.Apply.After_4_6_0(Term.Select(Term.Name(name), Term.Name("armor")), Term.ArgClause(List(), None)) if t.symbol.normalized.value == "com.dwolla.security.crypto.CryptoAlg.armor." =>
         Patch.replaceTree(t, s"$name.armor").atomic
-      case Term.Apply.After_4_6_0(Term.Select(Term.Name(_), fun@Term.Name("encrypt")), t@Term.ArgClause((keyName@Term.Name(_)) :: additionalArguments, None)) =>
-        migrateEncrypt(t, fun, additionalArguments, Some(keyName), offset = 1)
-      case Term.Apply.After_4_6_0(Term.Select(Term.Name(_), fun@Term.Name("encrypt")), t@Term.ArgClause(arguments, None)) =>
-        migrateEncrypt(t, fun, arguments, None, offset = 0)
-      case t@Term.Apply.After_4_6_0(Term.Name("tagChunkSize"), _) if !isEncryptAParent(t) =>
+      case t@Term.Apply.After_4_6_0(Term.Select(Term.Name(_), fun@Term.Name("encrypt")), argClause@Term.ArgClause((keyName@Term.Name(_)) :: additionalArguments, None)) if t.symbol.normalized.value == "com.dwolla.security.crypto.CryptoAlg.encrypt." =>
+        migrateEncrypt(argClause, fun, additionalArguments, Some(keyName), offset = 1)
+      case t@Term.Apply.After_4_6_0(Term.Select(Term.Name(_), fun@Term.Name("encrypt")), argClause@Term.ArgClause(arguments, None)) if t.symbol.normalized.value == "com.dwolla.security.crypto.CryptoAlg.encrypt." =>
+        migrateEncrypt(argClause, fun, arguments, None, offset = 0)
+      case t@Term.Apply.After_4_6_0(Term.Name("tagChunkSize"), _) if !isEncryptAParent(t) && t.symbol.normalized.value == "com.dwolla.security.crypto.package.tagChunkSize." =>
         Patch.replaceToken(t.tokens.head, "ChunkSize")
     }.asPatch
 
@@ -50,7 +51,16 @@ class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
                 val parameterName = parameter.displayName
 
                 s :+ (parameterName.capitalize -> value)
-              case _ => throw new RuntimeException(s"Unexpected method signature ${info.signature} (how did the code being modified ever compile?)")
+              case method: MethodSignature =>
+                println(method.parameterLists)
+                fun.pos.input match {
+                  case File(path, _) =>
+                    throw new RuntimeException(s"Unexpected method signature ${info.signature} at $path:${fun.pos.startLine + 1}:${fun.pos.startColumn + 1}–${fun.pos.endLine + 1}:${fun.pos.endColumn + 1}")
+                  case VirtualFile(path, _) =>
+                    throw new RuntimeException(s"Unexpected method signature ${info.signature} at $path:${fun.pos.startLine + 1}:${fun.pos.startColumn + 1}–${fun.pos.endLine + 1}:${fun.pos.endColumn + 1}")
+                  case _ =>
+                    throw new RuntimeException(s"Unexpected method signature ${info.signature} at ${fun.pos}")
+                }
             }
           case _ => s
         }
