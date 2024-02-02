@@ -10,10 +10,22 @@ class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
 
   override def fix(implicit doc: SemanticDocument): Patch =
     doc.tree.collect {
+      /*
+       * `Crypto[F]` -> `Crypto.resource[F]`
+       */
       case t@Term.ApplyType.After_4_6_0(Term.Name("CryptoAlg"), Type.ArgClause(List(Type.Name(name)))) if t.symbol.normalized.value == "com.dwolla.security.crypto.CryptoAlg." =>
         Patch.replaceTree(t, s"CryptoAlg.resource[$name]").atomic
+
+      /*
+       * `cryptoAlg.armor()` -> `cryptoAlg.armor`
+       */
       case t@Term.Apply.After_4_6_0(Term.Select(Term.Name(name), Term.Name("armor")), Term.ArgClause(List(), None)) if t.symbol.normalized.value == "com.dwolla.security.crypto.CryptoAlg.armor." =>
         Patch.replaceTree(t, s"$name.armor").atomic
+
+      /*
+       * Rewrite the various named and optional parameters of the `encrypt` method to use
+       * the `EncryptionConfig` object.
+       */
       case t@Term.Apply.After_4_6_0(Term.Select(Term.Name(_), fun@Term.Name("encrypt")), argClause@Term.ArgClause(_, _)) if t.symbol.normalized.value == "com.dwolla.security.crypto.CryptoAlg.encrypt." =>
         try {
           argClause match {
@@ -28,6 +40,10 @@ class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
           case ex: NoSuchElementException if ex.getMessage == "key not found: key" =>
             throw pathedException(fun)(s => new RuntimeException(s"Key not found at $s"))
         }
+
+      /*
+       * `tagChunkSize(foo)` -> `ChunkSize(foo)`
+       */
       case t@Term.Apply.After_4_6_0(Term.Name("tagChunkSize"), _) if !isEncryptAParent(t) && t.symbol.normalized.value == "com.dwolla.security.crypto.package.tagChunkSize." =>
         Patch.replaceToken(t.tokens.head, "ChunkSize")
     }.asPatch
