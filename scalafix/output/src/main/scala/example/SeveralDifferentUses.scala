@@ -16,6 +16,7 @@ object SeveralDifferentUses {
     // all arguments set
     alg.encrypt(EncryptionConfig().withChunkSize(chunkSize).withFileName(Option("filename")).withEncryption(Encryption.Aes256).withCompression(Compression.Bzip2).withPacketFormat(PgpLiteralDataPacketFormat.Utf8), key)
     alg.encrypt(EncryptionConfig().withChunkSize(ChunkSize(42)).withFileName(Option("filename")).withEncryption(Encryption.Aes256).withCompression(Compression.Bzip2).withPacketFormat(PgpLiteralDataPacketFormat.Utf8), key)
+    alg.encrypt(EncryptionConfig().withChunkSize(ChunkSize(42)).withFileName(Option("filename")).withEncryption(Encryption.Aes256).withCompression(Compression.Bzip2).withPacketFormat(PgpLiteralDataPacketFormat.Utf8), new PGPPublicKey(null, null))
 
     // all arguments set with named parameters
     alg.encrypt(EncryptionConfig().withChunkSize(chunkSize).withFileName(Option("filename")).withEncryption(Encryption.Aes256).withCompression(Compression.Bzip2).withPacketFormat(PgpLiteralDataPacketFormat.Utf8), key)

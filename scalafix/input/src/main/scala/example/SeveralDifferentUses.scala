@@ -18,6 +18,7 @@ object SeveralDifferentUses {
     // all arguments set
     alg.encrypt(key, chunkSize, Option("filename"), Encryption.Aes256, Compression.Bzip2, PgpLiteralDataPacketFormat.Utf8)
     alg.encrypt(key, tagChunkSize(42), Option("filename"), Encryption.Aes256, Compression.Bzip2, PgpLiteralDataPacketFormat.Utf8)
+    alg.encrypt(new PGPPublicKey(null, null), tagChunkSize(42), Option("filename"), Encryption.Aes256, Compression.Bzip2, PgpLiteralDataPacketFormat.Utf8)
 
     // all arguments set with named parameters
     alg.encrypt(key = key, chunkSize = chunkSize, fileName = Option("filename"), encryption = Encryption.Aes256, compression = Compression.Bzip2, packetFormat = PgpLiteralDataPacketFormat.Utf8)

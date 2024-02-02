@@ -7,28 +7,32 @@ A library for encrypting and decrypting fs2 `Stream[F, Byte]` using PGP.
 <tr>
 <th>Artifact</th>
 <th>Description</th>
-<th align="center">Cats Effect Version</th>
-<th align="center">fs2 Version</th>
 <th align="center">Scala 2.12</th>
 <th align="center">Scala 2.13</th>
+<th align="center">Scala 3</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>"fs2-pgp"</code></td>
 <td>Load PGP keys and use them to encrypt, decrypt, and armor byte streams.</td>
-<td align="center">Cats Effect 3</td>
-<td align="center">fs2 3.x</td>
+<td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
 <td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
 <td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
 </tr>
 <tr>
 <td><code>"pgp-testkit"</code></td>
 <td>ScalaCheck Generators and Arbitrary instances for PGP classes</td>
-<td align="center">Cats Effect 3</td>
-<td align="center">fs2 3.x</td>
 <td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
 <td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+<td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+</tr>
+<tr>
+<td><code>"fs2-pgp-scalafix"</code></td>
+<td>Scalafix rewrite rules to help update from `v0.4` to `v0.5`</td>
+<td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+<td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+<td align="center"><g-emoji class="g-emoji" alias="x" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/274c.png">❌</g-emoji></td>
 </tr>
 </tbody>
 </table>
@@ -124,3 +128,34 @@ hQEMAzY5h81qQKpXAQf/YTq6GtTkWlbg2DRu7r133FZaAudA149WB2BV/vsgyHkN
 ## Decryption
 
 Read a `PGPPrivateKey` using `PGPKeyAlg[F]`, then pipe the encrypted message bytes through `CryptoAlg[F].decrypt`. 
+
+## Scalafix Rule
+
+Add Scalafix to your project's build by [following the instructions](https://scalacenter.github.io/scalafix/docs/users/installation.html#sbt):
+
+1. Add the Scalafix plugin to the project by adding this to `project/plugins.sbt`:
+
+    ```scala
+    addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.11.1")
+    ```
+
+2. Enable SemanticDB by adding this to `build.sbt`:
+
+    ```scala
+    ThisBuild / semanticdbEnabled := true
+    ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
+    ThisBuild / scalafixScalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value)
+    ThisBuild / scalafixDependencies += "com.dwolla" %% "fs2-pgp-scalafix" % "0.5.0"
+    ```
+
+3. Make sure everything compiles, and run the Scalafix rule on the sbt console:
+
+    ```
+    Test/compile
+    Test/scalafix com.dwolla.security.crypto.V04to05
+    scalafix com.dwolla.security.crypto.V04to05
+    ```
+
+   (Run the Scalafix rule on the leafs of your project graph, and then work back to the middle. Tests should be updated before production code, because if the production code is updated, the test project won't compile anymore, etc.)
+
+4. Update the fs2-pgp version from `v0.4` to `v0.5`. (At this point, you can remove the Scalafix and SemanticDB keys from your build if you want.)
