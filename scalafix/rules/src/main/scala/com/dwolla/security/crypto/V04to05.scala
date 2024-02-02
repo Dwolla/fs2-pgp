@@ -14,10 +14,20 @@ class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
         Patch.replaceTree(t, s"CryptoAlg.resource[$name]").atomic
       case t@Term.Apply.After_4_6_0(Term.Select(Term.Name(name), Term.Name("armor")), Term.ArgClause(List(), None)) if t.symbol.normalized.value == "com.dwolla.security.crypto.CryptoAlg.armor." =>
         Patch.replaceTree(t, s"$name.armor").atomic
-      case t@Term.Apply.After_4_6_0(Term.Select(Term.Name(_), fun@Term.Name("encrypt")), argClause@Term.ArgClause((keyName@Term.Name(_)) :: additionalArguments, None)) if t.symbol.normalized.value == "com.dwolla.security.crypto.CryptoAlg.encrypt." =>
-        migrateEncrypt(argClause, fun, additionalArguments, Some(keyName), offset = 1)
-      case t@Term.Apply.After_4_6_0(Term.Select(Term.Name(_), fun@Term.Name("encrypt")), argClause@Term.ArgClause(arguments, None)) if t.symbol.normalized.value == "com.dwolla.security.crypto.CryptoAlg.encrypt." =>
-        migrateEncrypt(argClause, fun, arguments, None, offset = 0)
+      case t@Term.Apply.After_4_6_0(Term.Select(Term.Name(_), fun@Term.Name("encrypt")), argClause@Term.ArgClause(_, _)) if t.symbol.normalized.value == "com.dwolla.security.crypto.CryptoAlg.encrypt." =>
+        try {
+          argClause match {
+            case Term.ArgClause(arguments@Term.Assign(_, _) :: _, None) => // encrypt(…) where all arguments are named parameters
+              migrateEncrypt(argClause, fun, arguments, None, offset = 0)
+            case Term.ArgClause(key :: additionalArguments, None) => // encrypt(key, …), i.e. where the unnamed first argument is the key
+              migrateEncrypt(argClause, fun, additionalArguments, Some(key), offset = 1)
+            case other =>
+              throw pathedException(other)(s => new RuntimeException(s"Unexpected argument clause for encrypt at $s"))
+          }
+        } catch {
+          case ex: NoSuchElementException if ex.getMessage == "key not found: key" =>
+            throw pathedException(fun)(s => new RuntimeException(s"Key not found at $s"))
+        }
       case t@Term.Apply.After_4_6_0(Term.Name("tagChunkSize"), _) if !isEncryptAParent(t) && t.symbol.normalized.value == "com.dwolla.security.crypto.package.tagChunkSize." =>
         Patch.replaceToken(t.tokens.head, "ChunkSize")
     }.asPatch
@@ -33,11 +43,11 @@ class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
   private def migrateEncrypt(t: Term.ArgClause,
                              fun: Term.Name,
                              arguments: List[Term],
-                             keyName: Option[Term],
+                             keyValue: Option[Term],
                              offset: Int,
                             )
                             (implicit doc: SemanticDocument): Patch = {
-    val map = arguments.zipWithIndex.foldLeft(keyName.map("key" -> _).toList) {
+    val map = arguments.zipWithIndex.foldLeft(keyValue.map("key" -> _).toList) {
       case (s, (Term.Assign(Term.Name("key"), term), _)) => s :+ ("key" -> term)
       case (s, (Term.Assign(Term.Name("chunkSize"), Term.Apply.After_4_6_0(Term.Name("tagChunkSize"), Term.ArgClause(List(term), _))), _)) =>
         s :+ ("ChunkSize" -> term)
@@ -51,16 +61,7 @@ class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
                 val parameterName = parameter.displayName
 
                 s :+ (parameterName.capitalize -> value)
-              case method: MethodSignature =>
-                println(method.parameterLists)
-                fun.pos.input match {
-                  case File(path, _) =>
-                    throw new RuntimeException(s"Unexpected method signature ${info.signature} at $path:${fun.pos.startLine + 1}:${fun.pos.startColumn + 1}–${fun.pos.endLine + 1}:${fun.pos.endColumn + 1}")
-                  case VirtualFile(path, _) =>
-                    throw new RuntimeException(s"Unexpected method signature ${info.signature} at $path:${fun.pos.startLine + 1}:${fun.pos.startColumn + 1}–${fun.pos.endLine + 1}:${fun.pos.endColumn + 1}")
-                  case _ =>
-                    throw new RuntimeException(s"Unexpected method signature ${info.signature} at ${fun.pos}")
-                }
+              case _ => throw pathedException(fun)(s => new RuntimeException(s"Unexpected signature ${info.signature} at $s"))
             }
           case _ => s
         }
@@ -112,4 +113,15 @@ class V04to05 extends SemanticRule("com.dwolla.security.crypto.V04to05") {
 
     remainder :+ ("key" -> key)
   }
+
+  private def pathedException(tree: Tree)
+                             (f: String => Exception): Exception =
+    tree.pos.input match {
+      case File(path, _) =>
+        f(s"$path:${tree.pos.startLine + 1}:${tree.pos.startColumn + 1}–${tree.pos.endLine + 1}:${tree.pos.endColumn + 1}")
+      case VirtualFile(path, _) =>
+        f(s"$path:${tree.pos.startLine + 1}:${tree.pos.startColumn + 1}–${tree.pos.endLine + 1}:${tree.pos.endColumn + 1}")
+      case _ =>
+        f(tree.pos.toString)
+    }
 }
