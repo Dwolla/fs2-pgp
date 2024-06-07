@@ -74,7 +74,7 @@ object BouncyCastlePlugin extends AutoPlugin {
         libraryDependencies ++= {
           Seq(
             "org.typelevel" %% "cats-core" % "2.12.0",
-            "org.typelevel" %% "cats-effect" % "3.5.3",
+            "org.typelevel" %% "cats-effect" % "3.5.4",
             "co.fs2" %% "fs2-core" % "3.10.2",
             "co.fs2" %% "fs2-io" % "3.10.2",
             "com.chuusai" %% "shapeless" % "2.3.12",
