@@ -25,9 +25,10 @@ ThisBuild / githubWorkflowScalaVersions := Seq("2.13", "2.12")
 ThisBuild / tlCiReleaseBranches := Seq("main", "series/0.5")
 ThisBuild / tlBaseVersion := "0.4"
 ThisBuild / tlSonatypeUseLegacyHost := true
-ThisBuild / mergifyStewardConfig ~= {
-  _.map(_.copy(mergeMinors = true, author = "dwolla-oss-scala-steward[bot]"))
-}
+ThisBuild / mergifyStewardConfig ~= { _.map {
+  _.withAuthor("dwolla-oss-scala-steward[bot]")
+    .withMergeMinors(true)
+}}
 
 lazy val `fs2-pgp-root` = (project in file("."))
   .settings(publishArtifact := false)
