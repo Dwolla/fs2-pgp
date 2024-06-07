@@ -110,7 +110,7 @@ object BouncyCastlePlugin extends AutoPlugin {
         sourceDirectory := (ThisBuild / baseDirectory).value / "testkit" / "src",
         libraryDependencies ++= {
           Seq(
-            "org.scalacheck" %% "scalacheck" % "1.17.1",
+            "org.scalacheck" %% "scalacheck" % "1.18.0",
             "eu.timepit" %% "refined-scalacheck" % "0.10.3",
             "io.chrisdavenport" %% "cats-scalacheck" % "0.3.2",
           )
