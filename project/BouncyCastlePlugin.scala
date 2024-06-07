@@ -132,7 +132,7 @@ object BouncyCastlePlugin extends AutoPlugin {
         libraryDependencies ++= {
           Seq(
             "org.typelevel" %% "log4cats-noop" % "2.7.0" % Test,
-            "org.scalameta" %% "munit" % "0.7.29" % Test,
+            "org.scalameta" %% "munit" % "1.0.0" % Test,
             "org.typelevel" %% "scalacheck-effect" % "1.0.4" % Test,
             "org.typelevel" %% "scalacheck-effect-munit" % "1.0.4" % Test,
             "org.typelevel" %% "munit-cats-effect-3" % "1.0.7" % Test,
