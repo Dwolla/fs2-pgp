@@ -7,6 +7,7 @@ import com.dwolla.testutils._
 import com.eed3si9n.expecty.Expecty.{assert => Assert}
 import fs2._
 import munit.{CatsEffectSuite, ScalaCheckEffectSuite}
+import munit.catseffect.IOFixture
 import org.bouncycastle.openpgp._
 import org.scalacheck.Arbitrary._
 import org.scalacheck._
@@ -25,14 +26,14 @@ class CryptoAlgSpec
 
   private implicit val loggerFactory: LoggerFactory[IO] = Slf4jFactory.create[IO]
 
-  private val resource: Fixture[CryptoAlg[IO]] = ResourceSuiteLocalFixture("CryptoAlg[IO]", CryptoAlg.resource[IO])
-  override def munitFixtures: Seq[Fixture[_]] = List(resource)
+  private val resource: IOFixture[CryptoAlg[IO]] = ResourceSuiteLocalFixture("CryptoAlg[IO]", CryptoAlg.resource[IO])
+  override def munitFixtures: Seq[IOFixture[_]] = List(resource)
 
   override protected def scalaCheckTestParameters: Test.Parameters =
     Test.Parameters.default
       .withMinSuccessfulTests(10)
 
-  override val munitTimeout: Duration = 2.minutes
+  override val munitIOTimeout: Duration = 2.minutes
 
   private def genNelResource[F[_], A](implicit A: Arbitrary[Resource[F, A]]): Gen[Resource[F, NonEmptyList[A]]] =
     for {

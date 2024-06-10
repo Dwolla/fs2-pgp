@@ -23,8 +23,9 @@ object BouncyCastlePlugin extends AutoPlugin {
   // This plugin will automatically release a new suffixed artifact that can be used by users with bincompat issues.
   // Don't forget to regenerate the GitHub Actions workflow by running the `githubWorkflowGenerate` sbt task.
   private val bcpg = ArtifactVersions(
-    "org.bouncycastle" % "bcpg-jdk18on" % "1.77",
+    "org.bouncycastle" % "bcpg-jdk18on" % "1.78.1",
     List(
+      "1.77",
       "1.76",
       "1.75",
       "1.74",
@@ -41,7 +42,7 @@ object BouncyCastlePlugin extends AutoPlugin {
     libraryDependencies ++= {
       if (tlIsScala3.value) Seq.empty
       else Seq(
-        compilerPlugin("org.typelevel" %% "kind-projector" % "0.13.2" cross CrossVersion.full),
+        compilerPlugin("org.typelevel" %% "kind-projector" % "0.13.3" cross CrossVersion.full),
         compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
       )
     },
@@ -80,14 +81,14 @@ object BouncyCastlePlugin extends AutoPlugin {
         sourceDirectory := (ThisBuild / baseDirectory).value / "core" / "src",
         libraryDependencies ++= {
           Seq(
-            "org.typelevel" %% "cats-core" % "2.10.0",
-            "org.typelevel" %% "cats-effect" % "3.5.3",
-            "co.fs2" %% "fs2-core" % "3.9.4",
-            "co.fs2" %% "fs2-io" % "3.9.4",
+            "org.typelevel" %% "cats-core" % "2.12.0",
+            "org.typelevel" %% "cats-effect" % "3.5.4",
+            "co.fs2" %% "fs2-core" % "3.10.2",
+            "co.fs2" %% "fs2-io" % "3.10.2",
             "io.monix" %% "newtypes-core" % "0.2.3",
-            "org.scala-lang.modules" %% "scala-collection-compat" % "2.11.0",
-            "org.typelevel" %% "log4cats-core" % "2.6.0",
-            "eu.timepit" %% "refined" % "0.11.1",
+            "org.scala-lang.modules" %% "scala-collection-compat" % "2.12.0",
+            "org.typelevel" %% "log4cats-core" % "2.7.0",
+            "eu.timepit" %% "refined" % "0.11.2",
             bouncyCastle,
           )
         },
@@ -118,8 +119,8 @@ object BouncyCastlePlugin extends AutoPlugin {
         sourceDirectory := (ThisBuild / baseDirectory).value / "testkit" / "src",
         libraryDependencies ++= {
           Seq(
-            "org.scalacheck" %% "scalacheck" % "1.17.0",
-            "eu.timepit" %% "refined-scalacheck" % "0.11.1",
+            "org.scalacheck" %% "scalacheck" % "1.18.0",
+            "eu.timepit" %% "refined-scalacheck" % "0.11.2",
             "io.chrisdavenport" %% "cats-scalacheck" % "0.3.2",
           )
         },
@@ -140,13 +141,13 @@ object BouncyCastlePlugin extends AutoPlugin {
         sourceDirectory := (ThisBuild / baseDirectory).value / "tests" / "src",
         libraryDependencies ++= {
           Seq(
-            "org.typelevel" %% "log4cats-noop" % "2.6.0" % Test,
-            "org.typelevel" %% "log4cats-slf4j" % "2.6.0" % Test,
-            "ch.qos.logback" % "logback-classic" % "1.4.7" % Test,
-            "org.scalameta" %% "munit" % "0.7.29" % Test,
-            "org.typelevel" %% "scalacheck-effect" % "1.0.4" % Test,
-            "org.typelevel" %% "scalacheck-effect-munit" % "1.0.4" % Test,
-            "org.typelevel" %% "munit-cats-effect-3" % "1.0.7" % Test,
+            "org.typelevel" %% "log4cats-noop" % "2.7.0" % Test,
+            "org.typelevel" %% "log4cats-slf4j" % "2.7.0" % Test,
+            "ch.qos.logback" % "logback-classic" % "1.5.6" % Test,            
+            "org.scalameta" %% "munit" % "1.0.0" % Test,
+            "org.typelevel" %% "scalacheck-effect" % "2.0.0-M2" % Test,
+            "org.typelevel" %% "scalacheck-effect-munit" % "2.0.0-M2" % Test,
+            "org.typelevel" %% "munit-cats-effect" % "2.0.0" % Test,
             "dev.holt" %% "java-time-literals" % "1.1.1" % Test,
             "com.eed3si9n.expecty" %% "expecty" % "0.16.0" % Test,
           )

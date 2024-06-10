@@ -4,6 +4,7 @@ import cats.effect._
 import com.dwolla.testutils._
 import fs2._
 import munit.{CatsEffectSuite, ScalaCheckEffectSuite}
+import munit.catseffect.IOFixture
 import org.bouncycastle.bcpg._
 import org.bouncycastle.openpgp._
 import org.scalacheck._
@@ -21,9 +22,9 @@ class ArmorSpec
 
   private implicit val loggerFactory: LoggerFactory[IO] = Slf4jFactory.create[IO]
 
-  private val resource: Fixture[CryptoAlg[IO]] = ResourceSuiteLocalFixture("CryptoAlg[IO]", CryptoAlg.resource[IO])
+  private val resource: IOFixture[CryptoAlg[IO]] = ResourceSuiteLocalFixture("CryptoAlg[IO]", CryptoAlg.resource[IO])
 
-  override def munitFixtures: Seq[Fixture[_]] = List(resource)
+  override def munitFixtures: Seq[IOFixture[_]] = List(resource)
 
   test("CryptoAlg should support armoring a PGP value") {
     val crypto = resource()

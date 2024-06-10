@@ -3,6 +3,7 @@ package com.dwolla.security.crypto
 import cats.effect._
 import fs2._
 import munit.CatsEffectSuite
+import munit.catseffect.IOFixture
 import org.typelevel.log4cats._
 import org.typelevel.log4cats.slf4j.Slf4jFactory
 
@@ -11,9 +12,9 @@ class DecryptSpec
 
   private implicit val loggerFactory: LoggerFactory[IO] = Slf4jFactory.create[IO]
 
-  private val resource: Fixture[CryptoAlg[IO]] = ResourceSuiteLocalFixture("CryptoAlg[IO]", CryptoAlg.resource[IO])
+  private val resource: IOFixture[CryptoAlg[IO]] = ResourceSuiteLocalFixture("CryptoAlg[IO]", CryptoAlg.resource[IO])
 
-  override def munitFixtures: Seq[Fixture[_]] = List(resource)
+  override def munitFixtures: Seq[IOFixture[_]] = List(resource)
 
   /*
    * Steps to generate cryptotext on macOS, having copied the test key to the clipboard:
