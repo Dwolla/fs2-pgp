@@ -29,14 +29,14 @@ class CryptoAlgSpec
     override def fromName(name: String): IO[SelfAwareStructuredLogger[IO]] = NoOpLogger[IO].pure[IO]
   }
 
-  private val resource: Fixture[CryptoAlg[IO]] = ResourceSuiteLocalFixture("CryptoAlg[IO]", CryptoAlg[IO])
+  private val resource = ResourceSuiteLocalFixture("CryptoAlg[IO]", CryptoAlg[IO])
   override def munitFixtures = List(resource)
 
   override protected def scalaCheckTestParameters: Test.Parameters =
     Test.Parameters.default
       .withMinSuccessfulTests(1)
 
-  override val munitTimeout: Duration = 2.minutes
+  override val munitIOTimeout: Duration = 2.minutes
 
   test("CryptoAlg should round trip the plaintext using a key pair") {
     val crypto = resource()
