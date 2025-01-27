@@ -79,7 +79,7 @@ object BouncyCastlePlugin extends AutoPlugin {
             "co.fs2" %% "fs2-core" % "3.11.0",
             "co.fs2" %% "fs2-io" % "3.11.0",
             "com.chuusai" %% "shapeless" % "2.3.12",
-            "org.scala-lang.modules" %% "scala-collection-compat" % "2.12.0",
+            "org.scala-lang.modules" %% "scala-collection-compat" % "2.13.0",
             "org.typelevel" %% "log4cats-core" % "2.7.0",
             "eu.timepit" %% "refined" % "0.10.3",
             bouncyCastle,
