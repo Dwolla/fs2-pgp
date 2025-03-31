@@ -136,7 +136,7 @@ object BouncyCastlePlugin extends AutoPlugin {
             "org.scalameta" %% "munit" % "1.1.0" % Test,
             "org.typelevel" %% "scalacheck-effect" % "2.0.0-M2" % Test,
             "org.typelevel" %% "scalacheck-effect-munit" % "2.0.0-M2" % Test,
-            "org.typelevel" %% "munit-cats-effect" % "2.0.0" % Test,
+            "org.typelevel" %% "munit-cats-effect" % "2.1.0" % Test,
             "dev.holt" %% "java-time-literals" % "1.1.1" % Test,
             "com.eed3si9n.expecty" %% "expecty" % "0.17.0" % Test,
           )
