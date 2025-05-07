@@ -28,7 +28,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-22.04]
-        scala: [2.13, 2.12]
+        scala: [per-project-matrix]
         java: [temurin@17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -57,15 +57,15 @@ jobs:
       - name: Check that workflows are up to date
         run: sbt githubWorkflowCheck
 
-      - run: sbt '++ ${{ matrix.scala }}' test mimaReportBinaryIssues doc
+      - run: sbt test mimaReportBinaryIssues doc
 
       - name: Make target directories
         if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/series/0.5')
-        run: mkdir -p testkit/target testkit/.bcpg-1.75/target core/.bcpg-1.74/target core/target testkit/.bcpg-1.72.1/target testkit/.bcpg-1.72/target core/.bcpg-1.72.2/target core/.bcpg-1.73/target core/.bcpg-1.76/target core/.bcpg-1.71.1/target testkit/.bcpg-1.73/target core/.bcpg-1.72/target core/.bcpg-1.77/target testkit/.bcpg-1.74/target testkit/.bcpg-1.71/target testkit/.bcpg-1.76/target testkit/.bcpg-1.77/target core/.bcpg-1.75/target testkit/.bcpg-1.72.2/target core/.bcpg-1.71/target core/.bcpg-1.72.1/target testkit/.bcpg-1.71.1/target project/target
+        run: mkdir -p core/target/bcpg-1.72.1-jvm-2.12 core/target/bcpg-1.72-jvm-2.13 core/target/bcpg-1.71.1-jvm-2.13 testkit/target/bcpg-1.73-jvm-2.13 testkit/target/bcpg-1.72.2-jvm-2.12 core/target/bcpg-1.77-jvm-2.13 core/target/bcpg-1.80-jvm-2.12 testkit/target/bcpg-1.77-jvm-2.13 testkit/target/bcpg-1.75-jvm-2.12 testkit/target/bcpg-1.72.2-jvm-2.13 testkit/target/bcpg-1.72.1-jvm-2.12 core/target/bcpg-1.72.2-jvm-2.13 testkit/target/bcpg-1.74-jvm-2.12 .tests-latest/target/bcpg-1.80-jvm-2.12 testkit/target/bcpg-1.80-jvm-2.12 core/target/bcpg-1.73-jvm-2.12 core/target/bcpg-1.75-jvm-2.12 core/target/bcpg-1.77-jvm-2.12 core/target/bcpg-1.72.1-jvm-2.13 testkit/target/bcpg-1.71-jvm-2.13 core/target/bcpg-1.74-jvm-2.12 core/target/bcpg-1.73-jvm-2.13 core/target/bcpg-1.78.1-jvm-2.13 testkit/target/bcpg-1.72.1-jvm-2.13 testkit/target/bcpg-1.71.1-jvm-2.13 testkit/target/bcpg-1.77-jvm-2.12 testkit/target/bcpg-1.78.1-jvm-2.13 .pgp-testkit-latest/target/bcpg-1.80-jvm-2.12 testkit/target/bcpg-1.72-jvm-2.13 testkit/target/bcpg-1.71-jvm-2.12 .fs2-pgp-latest/target/bcpg-1.80-jvm-2.13 testkit/target/bcpg-1.76-jvm-2.13 testkit/target/bcpg-1.75-jvm-2.13 core/target/bcpg-1.80-jvm-2.13 testkit/target/bcpg-1.71.1-jvm-2.12 core/target/bcpg-1.74-jvm-2.13 testkit/target/bcpg-1.76-jvm-2.12 core/target/bcpg-1.72-jvm-2.12 core/target/bcpg-1.71.1-jvm-2.12 core/target/bcpg-1.71-jvm-2.12 testkit/target/bcpg-1.73-jvm-2.12 testkit/target/bcpg-1.80-jvm-2.13 testkit/target/bcpg-1.72-jvm-2.12 .tests-latest/target/bcpg-1.80-jvm-2.13 testkit/target/bcpg-1.74-jvm-2.13 core/target/bcpg-1.76-jvm-2.12 core/target/bcpg-1.75-jvm-2.13 .pgp-testkit-latest/target/bcpg-1.80-jvm-2.13 core/target/bcpg-1.78.1-jvm-2.12 .fs2-pgp-latest/target/bcpg-1.80-jvm-2.12 core/target/bcpg-1.72.2-jvm-2.12 core/target/bcpg-1.71-jvm-2.13 testkit/target/bcpg-1.78.1-jvm-2.12 core/target/bcpg-1.76-jvm-2.13 project/target
 
       - name: Compress target directories
         if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/series/0.5')
-        run: tar cf targets.tar testkit/target testkit/.bcpg-1.75/target core/.bcpg-1.74/target core/target testkit/.bcpg-1.72.1/target testkit/.bcpg-1.72/target core/.bcpg-1.72.2/target core/.bcpg-1.73/target core/.bcpg-1.76/target core/.bcpg-1.71.1/target testkit/.bcpg-1.73/target core/.bcpg-1.72/target core/.bcpg-1.77/target testkit/.bcpg-1.74/target testkit/.bcpg-1.71/target testkit/.bcpg-1.76/target testkit/.bcpg-1.77/target core/.bcpg-1.75/target testkit/.bcpg-1.72.2/target core/.bcpg-1.71/target core/.bcpg-1.72.1/target testkit/.bcpg-1.71.1/target project/target
+        run: tar cf targets.tar core/target/bcpg-1.72.1-jvm-2.12 core/target/bcpg-1.72-jvm-2.13 core/target/bcpg-1.71.1-jvm-2.13 testkit/target/bcpg-1.73-jvm-2.13 testkit/target/bcpg-1.72.2-jvm-2.12 core/target/bcpg-1.77-jvm-2.13 core/target/bcpg-1.80-jvm-2.12 testkit/target/bcpg-1.77-jvm-2.13 testkit/target/bcpg-1.75-jvm-2.12 testkit/target/bcpg-1.72.2-jvm-2.13 testkit/target/bcpg-1.72.1-jvm-2.12 core/target/bcpg-1.72.2-jvm-2.13 testkit/target/bcpg-1.74-jvm-2.12 .tests-latest/target/bcpg-1.80-jvm-2.12 testkit/target/bcpg-1.80-jvm-2.12 core/target/bcpg-1.73-jvm-2.12 core/target/bcpg-1.75-jvm-2.12 core/target/bcpg-1.77-jvm-2.12 core/target/bcpg-1.72.1-jvm-2.13 testkit/target/bcpg-1.71-jvm-2.13 core/target/bcpg-1.74-jvm-2.12 core/target/bcpg-1.73-jvm-2.13 core/target/bcpg-1.78.1-jvm-2.13 testkit/target/bcpg-1.72.1-jvm-2.13 testkit/target/bcpg-1.71.1-jvm-2.13 testkit/target/bcpg-1.77-jvm-2.12 testkit/target/bcpg-1.78.1-jvm-2.13 .pgp-testkit-latest/target/bcpg-1.80-jvm-2.12 testkit/target/bcpg-1.72-jvm-2.13 testkit/target/bcpg-1.71-jvm-2.12 .fs2-pgp-latest/target/bcpg-1.80-jvm-2.13 testkit/target/bcpg-1.76-jvm-2.13 testkit/target/bcpg-1.75-jvm-2.13 core/target/bcpg-1.80-jvm-2.13 testkit/target/bcpg-1.71.1-jvm-2.12 core/target/bcpg-1.74-jvm-2.13 testkit/target/bcpg-1.76-jvm-2.12 core/target/bcpg-1.72-jvm-2.12 core/target/bcpg-1.71.1-jvm-2.12 core/target/bcpg-1.71-jvm-2.12 testkit/target/bcpg-1.73-jvm-2.12 testkit/target/bcpg-1.80-jvm-2.13 testkit/target/bcpg-1.72-jvm-2.12 .tests-latest/target/bcpg-1.80-jvm-2.13 testkit/target/bcpg-1.74-jvm-2.13 core/target/bcpg-1.76-jvm-2.12 core/target/bcpg-1.75-jvm-2.13 .pgp-testkit-latest/target/bcpg-1.80-jvm-2.13 core/target/bcpg-1.78.1-jvm-2.12 .fs2-pgp-latest/target/bcpg-1.80-jvm-2.12 core/target/bcpg-1.72.2-jvm-2.12 core/target/bcpg-1.71-jvm-2.13 testkit/target/bcpg-1.78.1-jvm-2.12 core/target/bcpg-1.76-jvm-2.13 project/target
 
       - name: Upload target directories
         if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/series/0.5')
@@ -105,22 +105,12 @@ jobs:
         if: matrix.java == 'temurin@17' && steps.setup-java-temurin-17.outputs.cache-hit == 'false'
         run: sbt +update
 
-      - name: Download target directories (2.13)
+      - name: Download target directories (per-project-matrix)
         uses: actions/download-artifact@v4
         with:
-          name: target-${{ matrix.os }}-${{ matrix.java }}-2.13
+          name: target-${{ matrix.os }}-${{ matrix.java }}-per-project-matrix
 
-      - name: Inflate target directories (2.13)
-        run: |
-          tar xf targets.tar
-          rm targets.tar
-
-      - name: Download target directories (2.12)
-        uses: actions/download-artifact@v4
-        with:
-          name: target-${{ matrix.os }}-${{ matrix.java }}-2.12
-
-      - name: Inflate target directories (2.12)
+      - name: Inflate target directories (per-project-matrix)
         run: |
           tar xf targets.tar
           rm targets.tar
@@ -182,6 +172,7 @@ jobs:
       - name: Submit Dependencies
         uses: scalacenter/sbt-dependency-submission@v2
         with:
+          modules-ignore: tests-bcpg1.78.1_2.12 tests-bcpg1.71.1_2.12 tests-bcpg1.72.2_2.13 tests-bcpg1.72_2.12 tests-bcpg1.75_2.13 tests-bcpg1.74_2.13 tests-bcpg1.72.1_2.13 tests-bcpg1.73_2.12 tests-bcpg1.78.1_2.13 tests-bcpg1.77_2.12 tests-bcpg1.73_2.13 tests-bcpg1.80_2.13 fs2-pgp-root_2.12 tests-bcpg1.80_2.12 tests-bcpg1.77_2.13 tests-bcpg1.71_2.12 tests-bcpg1.74_2.12 tests-bcpg1.75_2.12 tests-bcpg1.76_2.12 tests-bcpg1.72_2.13 tests-bcpg1.71.1_2.13 tests-bcpg1.76_2.13 tests-bcpg1.72.2_2.12 tests-bcpg1.71_2.13 tests-bcpg1.72.1_2.12
           configs-ignore: test scala-tool scala-doc-tool test-internal
 
   validate-steward:
