@@ -11,6 +11,7 @@ import java.io.InputStream
 import scala.jdk.CollectionConverters._
 
 private[crypto] sealed trait DecryptToInputStream[F[_], A] {
+  // TODO migrate `maybeKeyId` from `Option[Long]` to `Option[KeyIdentifier]` in BC1.80+
   def decryptToInputStream(input: A, maybeKeyId: Option[Long])
                           (pbed: PGPPublicKeyEncryptedData): F[InputStream]
 }

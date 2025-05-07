@@ -65,6 +65,11 @@ object BouncyCastlePlugin extends AutoPlugin {
     def projectId(s: String): String =
       appendSuffixIfNotLatest("-bcpg")(s).replace('.', '_')
 
+    val deprecationWarningsAddedIn1_80 = Seq(
+      "-Wconf:msg=method getKeyID in class PGPPublicKeyEncryptedData is deprecated:s",
+      "-Wconf:msg=constructor JcaPGPKeyPair in class JcaPGPKeyPair is deprecated:s"
+    ).filter(_ => bouncyCastle.revision == "1.80")
+
     val core = project
       .in(adjustedFile("core"))
       .withId(projectId("fs2-pgp"))
@@ -98,7 +103,8 @@ object BouncyCastlePlugin extends AutoPlugin {
         },
         mimaPreviousArtifacts := {
           if (isLatest) mimaPreviousArtifacts.value else Set.empty
-        }
+        },
+        Compile / scalacOptions ++= deprecationWarningsAddedIn1_80,
       )
       .settings(commonSettings)
 
@@ -120,7 +126,8 @@ object BouncyCastlePlugin extends AutoPlugin {
         unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),
         mimaPreviousArtifacts := {
           if (isLatest) mimaPreviousArtifacts.value else Set.empty
-        }
+        },
+        Compile / scalacOptions ++= deprecationWarningsAddedIn1_80,
       )
       .dependsOn(core)
       .settings(commonSettings)

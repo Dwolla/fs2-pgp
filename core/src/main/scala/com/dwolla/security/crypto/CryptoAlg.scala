@@ -175,12 +175,14 @@ object CryptoAlg extends CryptoAlgPlatform {
                 case pbe: PGPPublicKeyEncryptedData =>
                   // a key ID of 0L indicates a "hidden" recipient,
                   // and we can't use that key ID to lookup the key
+                  // TODO `PGPPublicKeyEncryptedData#getKeyID` is deprecated in BC1.80+
                   val recipientKeyId = Option(pbe.getKeyID).filterNot(_ == 0)
 
                   pbe.decryptToInputStream(keylike, recipientKeyId)
                     .map(_.pure[Option])
                     .recoverWith {
                       case ex: KeyRingMissingKeyException =>
+                        // TODO `PGPPublicKeyEncryptedData#getKeyID` is deprecated in BC1.80+
                         Logger[F].trace(ex)(s"could not decrypt using key ${pbe.getKeyID}").as(None)
                     }
 
