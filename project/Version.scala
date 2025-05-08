@@ -57,7 +57,7 @@ final case class Version(major: Int,
 object Version {
   private val version = """^(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?$""".r
 
-  def apply(v: String): Option[Version] = Version.unapply(v)
+  def apply(v: String): Version = Version.unapply(v).get
 
   def unapply(v: String): Option[Version] = v match {
     case version(major, minor, patch) =>
