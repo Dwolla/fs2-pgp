@@ -2,7 +2,7 @@ import com.typesafe.tools.mima.plugin.MimaKeys.*
 import com.typesafe.tools.mima.plugin.MimaPlugin
 import explicitdeps.ExplicitDepsPlugin.autoImport.*
 import org.typelevel.sbt.TypelevelMimaPlugin.autoImport.*
-import org.typelevel.sbt.TypelevelSettingsPlugin
+import org.typelevel.sbt.{NoPublishPlugin, TypelevelSettingsPlugin}
 import org.typelevel.sbt.TypelevelSettingsPlugin.autoImport.*
 import org.typelevel.sbt.TypelevelSonatypeCiReleasePlugin.autoImport.*
 import org.typelevel.sbt.TypelevelVersioningPlugin.autoImport.*
@@ -193,10 +193,10 @@ object BouncyCastlePlugin extends AutoPlugin {
             "com.eed3si9n.expecty" %% "expecty" % "0.17.0" % Test,
           )
         },
-        publishArtifact := false,
         unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),
       )
     }
+      .enablePlugins(NoPublishPlugin)
       .dependsOn(core, testkit)
 
   override def buildSettings: Seq[Def.Setting[?]] = Seq(
