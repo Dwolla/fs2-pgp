@@ -95,6 +95,7 @@ object BouncyCastlePlugin extends AutoPlugin {
             case _ => Nil
           }
         },
+        tlVersionIntroduced := Map("2.12" -> v.introducedIntoFs2Pgp.toString, "2.13" -> v.introducedIntoFs2Pgp.toString),
       )
     )
 
@@ -105,7 +106,6 @@ object BouncyCastlePlugin extends AutoPlugin {
         axisValues = List(currentBouncyCastleVersion, VirtualAxis.jvm),
         _.settings(
           moduleName := p.id,
-          tlVersionIntroduced := Map("2.12" -> "0.4.7", "2.13" -> "0.4.7"),
         )
       )
       .dependsOn(p)
@@ -135,15 +135,6 @@ object BouncyCastlePlugin extends AutoPlugin {
           )
         },
         unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),
-        mimaBinaryIssueFilters ++= {
-          import com.typesafe.tools.mima.core.*
-          Seq(
-            // the CanCreateDecryptorFactory filters ignore a class and companion object that should have been package private
-            // and have been replaced with an alternative implementation that is package private
-            ProblemFilters.exclude[MissingClassProblem]("com.dwolla.security.crypto.CanCreateDecryptorFactory"),
-            ProblemFilters.exclude[MissingClassProblem]("com.dwolla.security.crypto.CanCreateDecryptorFactory$"),
-          )
-        },
         Compile / scalacOptions ++= deprecationWarningsAddedIn1_80(v.version),
       )
     }
@@ -268,7 +259,7 @@ object BouncyCastlePlugin extends AutoPlugin {
     ),
     startYear := Option(2020),
     sonatypeCredentialHost := xerial.sbt.Sonatype.sonatypeLegacy,
-    tlBaseVersion := "0.4",
+    tlBaseVersion := "0.5",
     tlCiReleaseBranches := Seq("main", "series/0.5"),
     mergifyRequiredJobs ++= Seq("validate-steward"),
     mergifyStewardConfig ~= { _.map {
