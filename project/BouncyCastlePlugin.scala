@@ -218,7 +218,7 @@ object BouncyCastlePlugin extends AutoPlugin {
           "org.typelevel" %% "log4cats-noop" % "2.7.0",
         ),
         scalacOptions ~= {
-          _.filterNot(_ == "-Xfatal-warnings")
+          _.filterNot(_.startsWith("-W"))
         },
         semanticdbEnabled := true,
         semanticdbVersion := scalafixSemanticdb.revision,
@@ -230,7 +230,7 @@ object BouncyCastlePlugin extends AutoPlugin {
     projectMatrixForSupportedBouncyCastleVersions("scalafix-output", "scalafix/output") { v =>
       List(
         scalacOptions ~= {
-          _.filterNot(_ == "-Xfatal-warnings")
+          _.filterNot(_.startsWith("-W"))
         },
       )
     }
