@@ -52,17 +52,6 @@ object BouncyCastlePlugin extends AutoPlugin {
    * Remember to regenerate the GitHub Actions workflow by running the `githubWorkflowGenerate` sbt task.
    */
   private val oldVersions: List[BouncyCastleVersion] = List(
-    BouncyCastleVersion("1.78.1", introducedIntoFs2Pgp = "0.5.0"),
-    BouncyCastleVersion("1.77", introducedIntoFs2Pgp = "0.5.0"),
-    BouncyCastleVersion("1.76", introducedIntoFs2Pgp = "0.5.0"),
-    BouncyCastleVersion("1.75", introducedIntoFs2Pgp = "0.5.0"),
-    BouncyCastleVersion("1.74", introducedIntoFs2Pgp = "0.5.0"),
-    BouncyCastleVersion("1.73", introducedIntoFs2Pgp = "0.5.0"),
-    BouncyCastleVersion("1.72.2", introducedIntoFs2Pgp = "0.5.0", bcutilsMapping = "1.72"),
-    BouncyCastleVersion("1.72.1", introducedIntoFs2Pgp = "0.5.0", bcutilsMapping = "1.72"),
-    BouncyCastleVersion("1.72", introducedIntoFs2Pgp = "0.5.0"),
-    BouncyCastleVersion("1.71.1", introducedIntoFs2Pgp = "0.5.0"),
-    BouncyCastleVersion("1.71", introducedIntoFs2Pgp = "0.5.0"),
   )
 
   private val supportedVersions = (currentBouncyCastleVersion :: oldVersions).sortBy(_.version).reverse
