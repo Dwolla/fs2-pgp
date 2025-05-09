@@ -5,9 +5,9 @@ import cats.syntax.all.*
 import fs2.*
 import fs2.io.{readOutputStream, writeOutputStream}
 import org.bouncycastle.bcpg.*
+import org.typelevel.scalaccompat.annotation.{nowarn212, nowarn3}
 
 import java.io.*
-import scala.annotation.nowarn
 
 trait Armor[F[_]] {
   def armor(chunkSize: ChunkSize): Pipe[F, Byte, Byte]
@@ -16,7 +16,8 @@ trait Armor[F[_]] {
 }
 
 object Armor {
-  @nowarn("""msg=parameter (?:value )?ev in method apply is never used""")
+  @nowarn212("""msg=parameter (?:value )?ev in method apply is never used""")
+  @nowarn3("""msg=parameter (?:value )?ev in method apply is never used""")
   def apply[F[_] : Async](implicit ev: BouncyCastleResource): Armor[F] = new Armor[F] {
     private val closeStreamsAfterUse = false
 

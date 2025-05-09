@@ -8,9 +8,9 @@ import fs2.io.{readInputStream, toInputStream}
 import org.bouncycastle.openpgp.*
 import org.bouncycastle.openpgp.operator.jcajce.*
 import org.typelevel.log4cats.{Logger, LoggerFactory}
+import org.typelevel.scalaccompat.annotation.{nowarn212, nowarn3}
 
 import java.io.*
-import scala.annotation.nowarn
 
 trait Decrypt[F[_]] {
   def decrypt(key: PGPPrivateKey,
@@ -52,12 +52,13 @@ trait Decrypt[F[_]] {
 }
 
 object Decrypt {
-  @nowarn("""msg=parameter (?:value )?ev in method apply is never used""")
+  @nowarn212("""msg=parameter (?:value )?ev in method apply is never used""")
+  @nowarn3("""msg=parameter (?:value )?ev in method apply is never used""")
   def apply[F[_] : Async : Logger : LoggerFactory](implicit ev: BouncyCastleResource): Decrypt[F] = new Decrypt[F] {
 
     private def inputStreamToPgpObjectStream(is: InputStream): Stream[F, Any] =
       Stream.eval(Sync[F].delay(new PGPObjectFactory(is, new JcaKeyFingerprintCalculator)))
-        .widen[java.lang.Iterable[_]]
+        .widen[java.lang.Iterable[?]]
         .flatMap(_.stream(objectIteratorChunkSize, Sync.Type.Blocking))
 
     private def pgpInputStreamToByteStream[A: DecryptToInputStream[F, *]](keylike: A,
@@ -81,6 +82,7 @@ object Decrypt {
               case pbe: PGPPublicKeyEncryptedData =>
                 // a key ID of 0L indicates a "hidden" recipient,
                 // and we can't use that key ID to lookup the key
+                // TODO `PGPPublicKeyEncryptedData#getKeyID` is deprecated in BC1.80+
                 val recipientKeyId = Option(pbe.getKeyID).filterNot(_ == 0)
 
                 // if the recipient is identified, check if it exists in the key material we have
@@ -92,10 +94,12 @@ object Decrypt {
                     .recoverWith {
                       case ex: KeyRingMissingKeyException =>
                         Logger[F]
+                          // TODO `PGPPublicKeyEncryptedData#getKeyID` is deprecated in BC1.80+
                           .trace(ex)(s"could not decrypt using key ${pbe.getKeyID}")
                           .as(None)
                       case ex: KeyMismatchException =>
                         Logger[F]
+                          // TODO `PGPPublicKeyEncryptedData#getKeyID` is deprecated in BC1.80+
                           .trace(ex)(s"could not decrypt using key ${pbe.getKeyID}")
                           .as(None)
                     }
