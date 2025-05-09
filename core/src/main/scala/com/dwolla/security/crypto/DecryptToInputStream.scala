@@ -1,17 +1,18 @@
 package com.dwolla.security.crypto
 
-import cats._
-import cats.effect._
-import cats.syntax.all._
-import fs2._
-import org.bouncycastle.openpgp._
+import cats.*
+import cats.effect.*
+import cats.syntax.all.*
+import fs2.*
+import org.bouncycastle.openpgp.*
 import org.bouncycastle.openpgp.operator.bc.{BcPBESecretKeyDecryptorBuilder, BcPGPDigestCalculatorProvider, BcPublicKeyDataDecryptorFactory}
 import org.typelevel.log4cats.{Logger, LoggerFactory, LoggerName}
 
 import java.io.InputStream
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 private[crypto] sealed trait DecryptToInputStream[F[_], A] {
+  // TODO migrate `maybeKeyId` from `Option[Long]` to `Option[KeyIdentifier]` in BC1.80+
   def decryptToInputStream(input: A, maybeKeyId: Option[Long])
                           (pbed: PGPPublicKeyEncryptedData): F[InputStream]
 
@@ -128,12 +129,4 @@ private[crypto] object DecryptToInputStream {
           Sync[F].blocking(new BcPublicKeyDataDecryptorFactory(input))
             .flatMap(attemptDecrypt(pbed, _))
     }
-
-  implicit def toPGPPublicKeyEncryptedDataOps(pbed: PGPPublicKeyEncryptedData): PGPPublicKeyEncryptedDataOps = new PGPPublicKeyEncryptedDataOps(pbed)
-}
-
-class PGPPublicKeyEncryptedDataOps(val pbed: PGPPublicKeyEncryptedData) extends AnyVal {
-  def decryptToInputStream[F[_], A](input: A, maybeKeyId: Option[Long])
-                                   (implicit D: DecryptToInputStream[F, A]): F[InputStream] =
-    DecryptToInputStream[F, A].decryptToInputStream(input, maybeKeyId)(pbed)
 }

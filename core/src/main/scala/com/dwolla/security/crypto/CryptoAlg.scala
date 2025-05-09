@@ -1,10 +1,10 @@
 package com.dwolla.security.crypto
 
 import cats.data.NonEmptyList
-import cats.effect._
-import cats.syntax.all._
-import fs2._
-import org.bouncycastle.openpgp._
+import cats.effect.*
+import cats.syntax.all.*
+import fs2.*
+import org.bouncycastle.openpgp.*
 import org.typelevel.log4cats.{LoggerFactory, LoggerName}
 
 trait CryptoAlg[F[_]]

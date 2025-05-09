@@ -7,7 +7,9 @@ import eu.timepit.refined.types.all.*
 import monix.newtypes.*
 import org.typelevel.log4cats.Logger
 import fs2.Stream
-import fs2.Stream.functionKInstance
+import org.bouncycastle.openpgp.PGPPublicKeyEncryptedData
+
+import java.io.InputStream
 
 type ChunkSize = ChunkSize.Type
 object ChunkSize extends NewtypeWrapped[PosInt]
@@ -28,3 +30,9 @@ private[crypto] implicit class RefinedNewtypeOps[RNT](val refinedNewtype: RNT) e
 }
 
 private[crypto] implicit def SLogger[F[_] : Logger]: Logger[Stream[F, *]] = Logger[F].mapK(Stream.functionKInstance[F])
+
+extension (pbed: PGPPublicKeyEncryptedData) {
+  private[crypto] def decryptToInputStream[F[_], A](input: A, maybeKeyId: Option[Long])
+                                   (implicit D: DecryptToInputStream[F, A]): F[InputStream] =
+    DecryptToInputStream[F, A].decryptToInputStream(input, maybeKeyId)(pbed)
+}

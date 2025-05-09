@@ -1,19 +1,19 @@
 package com.dwolla.security.crypto
 
 import cats.data.NonEmptyList
-import cats.effect._
-import cats.syntax.all._
+import cats.effect.*
+import cats.syntax.all.*
 import com.dwolla.security.crypto.Compression.Zip
 import com.dwolla.security.crypto.Encryption.Aes256
 import com.dwolla.security.crypto.PgpLiteralDataPacketFormat.Binary
-import fs2._
+import fs2.*
 import fs2.io.{readOutputStream, writeOutputStream}
-import org.bouncycastle.openpgp._
-import org.bouncycastle.openpgp.operator.jcajce._
+import org.bouncycastle.openpgp.*
+import org.bouncycastle.openpgp.operator.jcajce.*
 import org.typelevel.log4cats.Logger
+import org.typelevel.scalaccompat.annotation.{nowarn212, nowarn3}
 
-import java.io._
-import scala.annotation.nowarn
+import java.io.*
 
 trait Encrypt[F[_]] {
   final def encrypt(key: PGPPublicKey,
@@ -81,7 +81,8 @@ object Encrypt {
         } yield literalizer
       }
 
-  @nowarn("""msg=parameter (?:value )?ev in method apply is never used""")
+  @nowarn212("""msg=parameter (?:value )?ev in method apply is never used""")
+  @nowarn3("""msg=parameter (?:value )?ev in method apply is never used""")
   def apply[F[_] : Async : Logger](implicit ev: BouncyCastleResource): Encrypt[F] = new Encrypt[F] {
     private val closeStreamsAfterUse = false
 

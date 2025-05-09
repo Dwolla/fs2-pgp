@@ -24,7 +24,7 @@ object BouncyCastleResource {
       /*
        * If BouncyCastle was already registered (as indicated by the returned
        * position being -1) but we didn't register it (as indicated
-       * by the previous count being 0, then increment the counter so we
+       * by the previous count being 0), then increment the counter so we
        * don't end up removing it when all these BouncyCastleResources
        * go out of scope.
        */
