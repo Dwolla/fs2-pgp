@@ -139,7 +139,7 @@ object BouncyCastlePlugin extends AutoPlugin {
             "co.fs2" %% "fs2-io" % "3.12.0",
             "com.chuusai" %% "shapeless" % "2.3.13",
             "org.scala-lang.modules" %% "scala-collection-compat" % "2.13.0",
-            "org.typelevel" %% "log4cats-core" % "2.7.0",
+            "org.typelevel" %% "log4cats-core" % "2.7.1",
             "eu.timepit" %% "refined" % "0.10.3",
             "org.bouncycastle" % "bcpg-jdk18on" % v.version,
             "org.bouncycastle" % "bcutil-jdk18on" % v.bcutilsMapping.getOrElse(v.version),
@@ -184,7 +184,7 @@ object BouncyCastlePlugin extends AutoPlugin {
         sourceDirectory := (ThisBuild / baseDirectory).value / "tests" / "src",
         libraryDependencies ++= {
           Seq(
-            "org.typelevel" %% "log4cats-noop" % "2.7.0" % Test,
+            "org.typelevel" %% "log4cats-noop" % "2.7.1" % Test,
             "org.scalameta" %% "munit" % "1.1.1" % Test,
             "org.typelevel" %% "scalacheck-effect" % "2.0.0-M2" % Test,
             "org.typelevel" %% "scalacheck-effect-munit" % "2.0.0-M2" % Test,
