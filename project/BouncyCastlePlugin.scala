@@ -16,7 +16,6 @@ import sbt.internal.ProjectMatrix
 import sbt.librarymanagement.DependencyBuilders.OrganizationArtifactName
 import sbtprojectmatrix.ProjectMatrixPlugin
 import sbtprojectmatrix.ProjectMatrixPlugin.autoImport.*
-import xerial.sbt.Sonatype.autoImport.*
 
 object BouncyCastlePlugin extends AutoPlugin {
   override def trigger = noTrigger
@@ -227,7 +226,6 @@ object BouncyCastlePlugin extends AutoPlugin {
       ),
     ),
     startYear := Option(2020),
-    sonatypeCredentialHost := xerial.sbt.Sonatype.sonatypeLegacy,
     tlBaseVersion := "0.4",
     tlCiReleaseBranches := Seq("main", "series/0.5"),
     mergifyRequiredJobs ++= Seq("validate-steward"),
