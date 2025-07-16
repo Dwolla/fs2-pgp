@@ -2,7 +2,7 @@ import com.typesafe.tools.mima.plugin.MimaKeys.*
 import com.typesafe.tools.mima.plugin.MimaPlugin
 import explicitdeps.ExplicitDepsPlugin.autoImport.*
 import org.typelevel.sbt.TypelevelMimaPlugin.autoImport.*
-import org.typelevel.sbt.{NoPublishPlugin, TypelevelSettingsPlugin}
+import org.typelevel.sbt.{NoPublishPlugin, TypelevelMimaPlugin, TypelevelSettingsPlugin}
 import org.typelevel.sbt.TypelevelSettingsPlugin.autoImport.*
 import org.typelevel.sbt.TypelevelSonatypeCiReleasePlugin.autoImport.*
 import org.typelevel.sbt.TypelevelVersioningPlugin.autoImport.*
@@ -28,11 +28,10 @@ object BouncyCastlePlugin extends AutoPlugin {
       List(
         core,
         testkit,
-        tests,
       ).flatMap { pm =>
           List(pm, latestVersionAlias(pm))
         }
-        .flatMap(_.componentProjects)
+        .flatMap(_.componentProjects) ++ tests.componentProjects
   }
 
   private val currentBouncyCastleVersion = BouncyCastleVersion("1.81", introducedIntoFs2Pgp = "0.4.7")
@@ -102,7 +101,7 @@ object BouncyCastlePlugin extends AutoPlugin {
         },
         mimaPreviousArtifacts ++= { // TODO this can be removed when v0.5.0 is released
           val naiveVersionIntroduced = v.introducedIntoFs2Pgp
-          if (naiveVersionIntroduced < Version("0.4.7"))
+          if (naiveVersionIntroduced < Version("0.4.7") && publishArtifact.value)
             Set("com.dwolla" %% name.value % naiveVersionIntroduced)
           else Set()
         },
