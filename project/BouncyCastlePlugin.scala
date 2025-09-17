@@ -34,7 +34,7 @@ object BouncyCastlePlugin extends AutoPlugin {
         .flatMap(_.componentProjects) ++ tests.componentProjects
   }
 
-  private val currentBouncyCastleVersion = BouncyCastleVersion("1.81", introducedIntoFs2Pgp = "0.4.7")
+  private val currentBouncyCastleVersion = BouncyCastleVersion("1.82", introducedIntoFs2Pgp = "0.4.8")
 
   /** When a new version is released, move what was previously the current version into the list of old versions.
    *
@@ -43,6 +43,7 @@ object BouncyCastlePlugin extends AutoPlugin {
    * Remember to regenerate the GitHub Actions workflow by running the `githubWorkflowGenerate` sbt task.
    */
   private val oldVersions: List[BouncyCastleVersion] = List(
+    BouncyCastleVersion("1.81", introducedIntoFs2Pgp = "0.4.7"),
     BouncyCastleVersion("1.80", introducedIntoFs2Pgp = "0.4.7"),
     BouncyCastleVersion("1.78.1", introducedIntoFs2Pgp = "0.4.6"),
     BouncyCastleVersion("1.77", introducedIntoFs2Pgp = "0.4.5"),
