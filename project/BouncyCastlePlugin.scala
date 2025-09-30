@@ -77,7 +77,7 @@ object BouncyCastlePlugin extends AutoPlugin {
       _.settings(
         moduleName := name.value + v.moduleNameSuffix,
         s(v),
-        addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.13.3" cross CrossVersion.full),
+        addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.13.4" cross CrossVersion.full),
         addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
         Compile / scalacOptions ++= {
           CrossVersion.partialVersion(scalaVersion.value) match {
