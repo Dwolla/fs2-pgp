@@ -138,7 +138,7 @@ object BouncyCastlePlugin extends AutoPlugin {
             "co.fs2" %% "fs2-core" % "3.12.2",
             "co.fs2" %% "fs2-io" % "3.12.2",
             "com.chuusai" %% "shapeless" % "2.3.13",
-            "org.scala-lang.modules" %% "scala-collection-compat" % "2.13.0",
+            "org.scala-lang.modules" %% "scala-collection-compat" % "2.14.0",
             "org.typelevel" %% "log4cats-core" % "2.7.1",
             "eu.timepit" %% "refined" % "0.10.3",
             "org.bouncycastle" % "bcpg-jdk18on" % v.version,
