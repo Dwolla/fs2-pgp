@@ -190,7 +190,7 @@ object BouncyCastlePlugin extends AutoPlugin {
             "org.typelevel" %% "scalacheck-effect-munit" % "2.0.0-M2" % Test,
             "org.typelevel" %% "munit-cats-effect" % "2.1.0" % Test,
             "dev.holt" %% "java-time-literals" % "1.1.1" % Test,
-            "com.eed3si9n.expecty" %% "expecty" % "0.17.0" % Test,
+            "com.eed3si9n.expecty" %% "expecty" % "0.17.1" % Test,
           )
         },
         unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),
