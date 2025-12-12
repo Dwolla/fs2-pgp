@@ -34,7 +34,7 @@ object BouncyCastlePlugin extends AutoPlugin {
         .flatMap(_.componentProjects) ++ tests.componentProjects
   }
 
-  private val currentBouncyCastleVersion = BouncyCastleVersion("1.82", introducedIntoFs2Pgp = "0.4.8")
+  private val currentBouncyCastleVersion = BouncyCastleVersion("1.83", introducedIntoFs2Pgp = "0.4.8")
 
   /** When a new version is released, move what was previously the current version into the list of old versions.
    *
