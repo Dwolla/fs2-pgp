@@ -61,7 +61,7 @@ object BouncyCastlePlugin extends AutoPlugin {
   private val supportedVersions = (currentBouncyCastleVersion :: oldVersions).sortBy(_.version).reverse
 
   private val SCALA_2_13: String = "2.13.17"
-  private val SCALA_2_12 = "2.12.20"
+  private val SCALA_2_12 = "2.12.21"
   private val Scala2Versions: Seq[String] = Seq(SCALA_2_13, SCALA_2_12)
 
   private def projectMatrixForSupportedBouncyCastleVersions(id: String,
