@@ -1,5 +1,5 @@
-addSbtPlugin("org.typelevel" % "sbt-typelevel-ci-release" % "0.8.3")
-addSbtPlugin("org.typelevel" % "sbt-typelevel-mergify" % "0.8.3")
-addSbtPlugin("org.typelevel" % "sbt-typelevel-settings" % "0.8.3")
+addSbtPlugin("org.typelevel" % "sbt-typelevel-ci-release" % "0.8.4")
+addSbtPlugin("org.typelevel" % "sbt-typelevel-mergify" % "0.8.4")
+addSbtPlugin("org.typelevel" % "sbt-typelevel-settings" % "0.8.4")
 addSbtPlugin("com.github.cb372" % "sbt-explicit-dependencies" % "0.3.1")
 addSbtPlugin("com.eed3si9n" % "sbt-projectmatrix" % "0.11.0")
