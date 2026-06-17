@@ -34,7 +34,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout current branch (full)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -44,7 +44,7 @@ jobs:
       - name: Setup Java (temurin@17)
         id: setup-java-temurin-17
         if: matrix.java == 'temurin@17'
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
@@ -61,15 +61,15 @@ jobs:
 
       - name: Make target directories
         if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/series/0.5')
-        run: mkdir -p core/target/bcpg-1.80-jvm-3 testkit/target/bcpg-1.80-jvm-3 core/target/bcpg-1.80-jvm-2.12 testkit/target/bcpg-1.80-jvm-2.12 .pgp-testkit-latest/target/bcpg-1.80-jvm-2.12 scalafix/rules/target/bcpg-1.80-jvm-2.12 .fs2-pgp-latest/target/bcpg-1.80-jvm-2.13 .pgp-testkit-latest/target/bcpg-1.80-jvm-3 .fs2-pgp-latest/target/bcpg-1.80-jvm-3 core/target/bcpg-1.80-jvm-2.13 testkit/target/bcpg-1.80-jvm-2.13 scalafix/rules/target/bcpg-1.80-jvm-2.13 .pgp-testkit-latest/target/bcpg-1.80-jvm-2.13 .fs2-pgp-latest/target/bcpg-1.80-jvm-2.12 project/target
+        run: mkdir -p scalafix/rules/target/bcpg-1.82-jvm-2.13 core/target/bcpg-1.82-jvm-3 testkit/target/bcpg-1.82-jvm-2.13 .pgp-testkit-latest/target/bcpg-1.82-jvm-2.13 scalafix/rules/target/bcpg-1.82-jvm-2.12 .pgp-testkit-latest/target/bcpg-1.82-jvm-3 testkit/target/bcpg-1.82-jvm-2.12 .fs2-pgp-latest/target/bcpg-1.82-jvm-3 .fs2-pgp-latest/target/bcpg-1.82-jvm-2.12 testkit/target/bcpg-1.82-jvm-3 core/target/bcpg-1.82-jvm-2.12 .pgp-testkit-latest/target/bcpg-1.82-jvm-2.12 core/target/bcpg-1.82-jvm-2.13 .fs2-pgp-latest/target/bcpg-1.82-jvm-2.13 project/target
 
       - name: Compress target directories
         if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/series/0.5')
-        run: tar cf targets.tar core/target/bcpg-1.80-jvm-3 testkit/target/bcpg-1.80-jvm-3 core/target/bcpg-1.80-jvm-2.12 testkit/target/bcpg-1.80-jvm-2.12 .pgp-testkit-latest/target/bcpg-1.80-jvm-2.12 scalafix/rules/target/bcpg-1.80-jvm-2.12 .fs2-pgp-latest/target/bcpg-1.80-jvm-2.13 .pgp-testkit-latest/target/bcpg-1.80-jvm-3 .fs2-pgp-latest/target/bcpg-1.80-jvm-3 core/target/bcpg-1.80-jvm-2.13 testkit/target/bcpg-1.80-jvm-2.13 scalafix/rules/target/bcpg-1.80-jvm-2.13 .pgp-testkit-latest/target/bcpg-1.80-jvm-2.13 .fs2-pgp-latest/target/bcpg-1.80-jvm-2.12 project/target
+        run: tar cf targets.tar scalafix/rules/target/bcpg-1.82-jvm-2.13 core/target/bcpg-1.82-jvm-3 testkit/target/bcpg-1.82-jvm-2.13 .pgp-testkit-latest/target/bcpg-1.82-jvm-2.13 scalafix/rules/target/bcpg-1.82-jvm-2.12 .pgp-testkit-latest/target/bcpg-1.82-jvm-3 testkit/target/bcpg-1.82-jvm-2.12 .fs2-pgp-latest/target/bcpg-1.82-jvm-3 .fs2-pgp-latest/target/bcpg-1.82-jvm-2.12 testkit/target/bcpg-1.82-jvm-3 core/target/bcpg-1.82-jvm-2.12 .pgp-testkit-latest/target/bcpg-1.82-jvm-2.12 core/target/bcpg-1.82-jvm-2.13 .fs2-pgp-latest/target/bcpg-1.82-jvm-2.13 project/target
 
       - name: Upload target directories
         if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/series/0.5')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: target-${{ matrix.os }}-${{ matrix.java }}-${{ matrix.scala }}
           path: targets.tar
@@ -85,7 +85,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout current branch (full)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -95,7 +95,7 @@ jobs:
       - name: Setup Java (temurin@17)
         id: setup-java-temurin-17
         if: matrix.java == 'temurin@17'
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
@@ -106,7 +106,7 @@ jobs:
         run: sbt +update
 
       - name: Download target directories (per-project-matrix)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: target-${{ matrix.os }}-${{ matrix.java }}-per-project-matrix
 
@@ -149,7 +149,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout current branch (full)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -159,7 +159,7 @@ jobs:
       - name: Setup Java (temurin@17)
         id: setup-java-temurin-17
         if: matrix.java == 'temurin@17'
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
@@ -172,7 +172,7 @@ jobs:
       - name: Submit Dependencies
         uses: scalacenter/sbt-dependency-submission@v2
         with:
-          modules-ignore: scalafix-output-bcpg1.80_2.12 scalafix-input-bcpg1.80_2.13 scalafix-output-bcpg1.80_2.13 tests-bcpg1.80_2.13 fs2-pgp-root_2.12 tests-bcpg1.80_2.12 tests-bcpg1.80_3 scalafix-tests-bcpg1.80_2.13 scalafix-tests-bcpg1.80_2.12 scalafix-input-bcpg1.80_2.12
+          modules-ignore: scalafix-output-bcpg1.82_2.13 scalafix-tests-bcpg1.82_2.12 scalafix-tests-bcpg1.82_2.13 fs2-pgp-root_2.12 scalafix-output-bcpg1.82_2.12 tests-bcpg1.82_3 tests-bcpg1.82_2.13 scalafix-input-bcpg1.82_2.13 tests-bcpg1.82_2.12 scalafix-input-bcpg1.82_2.12
           configs-ignore: test scala-tool scala-doc-tool test-internal
 
   validate-steward:
@@ -184,12 +184,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout current branch (fast)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Java (temurin@11)
         id: setup-java-temurin-11
         if: matrix.java == 'temurin@11'
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 11
