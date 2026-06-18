@@ -6,7 +6,7 @@ import com.typesafe.tools.mima.plugin.MimaPlugin
 import explicitdeps.ExplicitDepsPlugin.autoImport.*
 import org.typelevel.sbt.TypelevelKernelPlugin.autoImport.tlIsScala3
 import org.typelevel.sbt.TypelevelMimaPlugin.autoImport.*
-import org.typelevel.sbt.{NoPublishPlugin, TypelevelSettingsPlugin}
+import org.typelevel.sbt.{NoPublishPlugin, TypelevelMimaPlugin, TypelevelSettingsPlugin}
 import org.typelevel.sbt.TypelevelSettingsPlugin.autoImport.*
 import org.typelevel.sbt.TypelevelSonatypeCiReleasePlugin.autoImport.*
 import org.typelevel.sbt.TypelevelVersioningPlugin.autoImport.*
@@ -20,7 +20,6 @@ import sbt.internal.ProjectMatrix
 import sbt.librarymanagement.DependencyBuilders.OrganizationArtifactName
 import sbtprojectmatrix.ProjectMatrixPlugin
 import sbtprojectmatrix.ProjectMatrixPlugin.autoImport.*
-import xerial.sbt.Sonatype.autoImport.*
 
 object BouncyCastlePlugin extends AutoPlugin {
   override def trigger = noTrigger
@@ -43,7 +42,7 @@ object BouncyCastlePlugin extends AutoPlugin {
         .flatMap(_.componentProjects)
   }
 
-  private val currentBouncyCastleVersion = BouncyCastleVersion("1.80", introducedIntoFs2Pgp = "0.5.0")
+  private val currentBouncyCastleVersion = BouncyCastleVersion("1.82", introducedIntoFs2Pgp = "0.5.0")
 
   /** When a new version is released, move what was previously the current version into the list of old versions.
    *
@@ -56,8 +55,8 @@ object BouncyCastlePlugin extends AutoPlugin {
 
   private val supportedVersions = (currentBouncyCastleVersion :: oldVersions).sortBy(_.version).reverse
 
-  private val SCALA_2_13: String = "2.13.16"
-  private val SCALA_2_12 = "2.12.20"
+  private val SCALA_2_13: String = "2.13.18"
+  private val SCALA_2_12 = "2.12.21"
   private val Scala2Versions: Seq[String] = Seq(SCALA_2_13, SCALA_2_12)
   private val SCALA_3 = "3.3.6"
   private val AllScalaVersions = Seq(SCALA_3, SCALA_2_13, SCALA_2_12)
@@ -78,7 +77,7 @@ object BouncyCastlePlugin extends AutoPlugin {
         libraryDependencies ++= {
           if (tlIsScala3.value) Seq.empty
           else Seq(
-            compilerPlugin("org.typelevel" %% "kind-projector" % "0.13.3" cross CrossVersion.full),
+            compilerPlugin("org.typelevel" %% "kind-projector" % "0.13.4" cross CrossVersion.full),
             compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
           )
         },
@@ -113,7 +112,7 @@ object BouncyCastlePlugin extends AutoPlugin {
   private def deprecationWarningsAddedIn1_80(v: Version): Seq[String] = Seq(
     "-Wconf:msg=method getKeyID in class PGPPublicKeyEncryptedData is deprecated:s",
     "-Wconf:msg=constructor JcaPGPKeyPair in class JcaPGPKeyPair is deprecated:s"
-  ).filter(_ => v == Version("1.80"))
+  ).filter(_ => v >= Version("1.80"))
 
   private lazy val core =
     projectMatrixForSupportedBouncyCastleVersions("fs2-pgp", "core") { v =>
@@ -123,12 +122,12 @@ object BouncyCastlePlugin extends AutoPlugin {
         libraryDependencies ++= {
           Seq(
             "org.typelevel" %% "cats-core" % "2.13.0",
-            "org.typelevel" %% "cats-effect" % "3.6.1",
-            "co.fs2" %% "fs2-core" % "3.12.0",
-            "co.fs2" %% "fs2-io" % "3.12.0",
+            "org.typelevel" %% "cats-effect" % "3.7.0",
+            "co.fs2" %% "fs2-core" % "3.13.0",
+            "co.fs2" %% "fs2-io" % "3.13.0",
             "io.monix" %% "newtypes-core" % "0.2.3",
-            "org.scala-lang.modules" %% "scala-collection-compat" % "2.13.0",
-            "org.typelevel" %% "log4cats-core" % "2.7.0",
+            "org.scala-lang.modules" %% "scala-collection-compat" % "2.14.0",
+            "org.typelevel" %% "log4cats-core" % "2.8.0",
             "eu.timepit" %% "refined" % "0.11.3",
             "org.bouncycastle" % "bcpg-jdk18on" % v.version,
             "org.bouncycastle" % "bcutil-jdk18on" % v.bcutilsMapping.getOrElse(v.version),
@@ -146,7 +145,7 @@ object BouncyCastlePlugin extends AutoPlugin {
         sourceDirectory := (ThisBuild / baseDirectory).value / "testkit" / "src",
         libraryDependencies ++= {
           Seq(
-            "org.scalacheck" %% "scalacheck" % "1.18.1",
+            "org.scalacheck" %% "scalacheck" % "1.19.0",
             "eu.timepit" %% "refined-scalacheck" % "0.11.3",
             "io.chrisdavenport" %% "cats-scalacheck" % "0.3.2",
           )
@@ -164,15 +163,15 @@ object BouncyCastlePlugin extends AutoPlugin {
         sourceDirectory := (ThisBuild / baseDirectory).value / "tests" / "src",
         libraryDependencies ++= {
           Seq(
-            "org.typelevel" %% "log4cats-noop" % "2.7.0" % Test,
+            "org.typelevel" %% "log4cats-noop" % "2.8.0" % Test,
             "org.typelevel" %% "log4cats-slf4j" % "2.7.0" % Test,
             "ch.qos.logback" % "logback-classic" % "1.5.18" % Test,
-            "org.scalameta" %% "munit" % "1.1.1" % Test,
-            "org.typelevel" %% "scalacheck-effect" % "2.0.0-M2" % Test,
-            "org.typelevel" %% "scalacheck-effect-munit" % "2.0.0-M2" % Test,
-            "org.typelevel" %% "munit-cats-effect" % "2.1.0" % Test,
+            "org.scalameta" %% "munit" % "1.3.1" % Test,
+            "org.typelevel" %% "scalacheck-effect" % "2.1.0" % Test,
+            "org.typelevel" %% "scalacheck-effect-munit" % "2.1.0" % Test,
+            "org.typelevel" %% "munit-cats-effect" % "2.2.0" % Test,
             "dev.holt" %% "java-time-literals" % "1.1.1" % Test,
-            "com.eed3si9n.expecty" %% "expecty" % "0.17.0" % Test,
+            "com.eed3si9n.expecty" %% "expecty" % "0.17.1" % Test,
           )
         },
         unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),
@@ -258,7 +257,6 @@ object BouncyCastlePlugin extends AutoPlugin {
       ),
     ),
     startYear := Option(2020),
-    sonatypeCredentialHost := xerial.sbt.Sonatype.sonatypeLegacy,
     tlBaseVersion := "0.5",
     tlCiReleaseBranches := Seq("main", "series/0.5"),
     mergifyRequiredJobs ++= Seq("validate-steward"),
