@@ -140,7 +140,7 @@ object BouncyCastlePlugin extends AutoPlugin {
             "com.chuusai" %% "shapeless" % "2.3.13",
             "org.scala-lang.modules" %% "scala-collection-compat" % "2.14.0",
             "org.typelevel" %% "log4cats-core" % "2.8.0",
-            "eu.timepit" %% "refined" % "0.10.3",
+            "eu.timepit" %% "refined" % "0.11.4",
             "org.bouncycastle" % "bcpg-jdk18on" % v.version,
             "org.bouncycastle" % "bcutil-jdk18on" % v.bcutilsMapping.getOrElse(v.version),
           )
@@ -167,7 +167,7 @@ object BouncyCastlePlugin extends AutoPlugin {
         libraryDependencies ++= {
           Seq(
             "org.scalacheck" %% "scalacheck" % "1.19.0",
-            "eu.timepit" %% "refined-scalacheck" % "0.10.3",
+            "eu.timepit" %% "refined-scalacheck" % "0.11.4",
             "io.chrisdavenport" %% "cats-scalacheck" % "0.3.2",
           )
         },
