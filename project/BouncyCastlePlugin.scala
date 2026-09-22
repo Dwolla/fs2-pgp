@@ -123,8 +123,8 @@ object BouncyCastlePlugin extends AutoPlugin {
           Seq(
             "org.typelevel" %% "cats-core" % "2.13.0",
             "org.typelevel" %% "cats-effect" % "3.7.0",
-            "co.fs2" %% "fs2-core" % "3.13.0",
-            "co.fs2" %% "fs2-io" % "3.13.0",
+            "co.fs2" %% "fs2-core" % "3.14.0",
+            "co.fs2" %% "fs2-io" % "3.14.0",
             "io.monix" %% "newtypes-core" % "0.2.3",
             "org.scala-lang.modules" %% "scala-collection-compat" % "2.14.0",
             "org.typelevel" %% "log4cats-core" % "2.8.0",
@@ -145,7 +145,7 @@ object BouncyCastlePlugin extends AutoPlugin {
         sourceDirectory := (ThisBuild / baseDirectory).value / "testkit" / "src",
         libraryDependencies ++= {
           Seq(
-            "org.scalacheck" %% "scalacheck" % "1.19.0",
+            "org.scalacheck" %% "scalacheck" % "1.20.0",
             "eu.timepit" %% "refined-scalacheck" % "0.11.3",
             "io.chrisdavenport" %% "cats-scalacheck" % "0.3.2",
           )
@@ -166,10 +166,10 @@ object BouncyCastlePlugin extends AutoPlugin {
             "org.typelevel" %% "log4cats-noop" % "2.8.0" % Test,
             "org.typelevel" %% "log4cats-slf4j" % "2.7.0" % Test,
             "ch.qos.logback" % "logback-classic" % "1.5.18" % Test,
-            "org.scalameta" %% "munit" % "1.3.3" % Test,
+            "org.scalameta" %% "munit" % "1.3.6" % Test,
             "org.typelevel" %% "scalacheck-effect" % "2.1.0" % Test,
             "org.typelevel" %% "scalacheck-effect-munit" % "2.1.0" % Test,
-            "org.typelevel" %% "munit-cats-effect" % "2.2.0" % Test,
+            "org.typelevel" %% "munit-cats-effect" % "2.2.1" % Test,
             "dev.holt" %% "java-time-literals" % "1.1.1" % Test,
             "com.eed3si9n.expecty" %% "expecty" % "0.17.1" % Test,
           )
