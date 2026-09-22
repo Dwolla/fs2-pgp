@@ -166,7 +166,7 @@ object BouncyCastlePlugin extends AutoPlugin {
             "org.typelevel" %% "log4cats-noop" % "2.8.0" % Test,
             "org.typelevel" %% "log4cats-slf4j" % "2.7.0" % Test,
             "ch.qos.logback" % "logback-classic" % "1.5.18" % Test,
-            "org.scalameta" %% "munit" % "1.3.1" % Test,
+            "org.scalameta" %% "munit" % "1.3.3" % Test,
             "org.typelevel" %% "scalacheck-effect" % "2.1.0" % Test,
             "org.typelevel" %% "scalacheck-effect-munit" % "2.1.0" % Test,
             "org.typelevel" %% "munit-cats-effect" % "2.2.0" % Test,
