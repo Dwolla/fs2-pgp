@@ -46,11 +46,11 @@ trait PgpArbitraries extends PgpArbitrariesPlatform {
     BouncyCastleResource[F]
       .evalMap { _ =>
         for {
-          generator <- Sync[F].blocking {
+          generator <- BouncyCastleResource.logHistoryIfProviderMissing(Sync[F].blocking {
             val instance = KeyPairGenerator.getInstance("RSA", "BC")
             instance.initialize(keySize.value)
             instance
-          }
+          })
           pair <- Sync[F].delay {
             generator.generateKeyPair()
           }
