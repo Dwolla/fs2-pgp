@@ -77,7 +77,7 @@ object BouncyCastleResource {
 
   /**
    * Wraps an effect that depends on the "BC" security provider being registered.
-   * If it fails with a [[java.security.NoSuchProviderException]], the recent
+   * If it fails with a `java.security.NoSuchProviderException`, the recent
    * register/deregister history is printed to stderr before the exception is
    * rethrown unchanged, so a rare occurrence of this failure in CI is
    * self-diagnosing instead of just a bare exception with no context.
