@@ -168,7 +168,7 @@ object BouncyCastlePlugin extends AutoPlugin {
           Seq(
             "org.scalacheck" %% "scalacheck" % "1.20.0",
             "eu.timepit" %% "refined-scalacheck" % "0.10.3",
-            "io.chrisdavenport" %% "cats-scalacheck" % "0.3.2",
+            "io.chrisdavenport" %% "cats-scalacheck" % "0.4.0",
           )
         },
         unusedCompileDependenciesFilter -= moduleFilter("org.scala-lang.modules", "scala-collection-compat"),
